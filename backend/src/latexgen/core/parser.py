@@ -37,8 +37,9 @@ def parse_template(content: str) -> list[TemplateField]:
     seen: dict[str, TemplateField] = {}
     for match in MARKER_PATTERN.finditer(content):
         name = match.group(1)
-        declared_type = (match.group(2) or "string").lower()
-        raw_argument = match.group(3)
+        required = match.group(2) is None  # a trailing "?" marks it optional
+        declared_type = (match.group(3) or "string").lower()
+        raw_argument = match.group(4)
 
         if declared_type not in VALID_TYPES:
             raise ParseError(
@@ -46,7 +47,7 @@ def parse_template(content: str) -> list[TemplateField]:
                 f"Valid types: {', '.join(sorted(VALID_TYPES))}."
             )
 
-        field = _build_field(name, declared_type, raw_argument)
+        field = _build_field(name, declared_type, raw_argument, required)
 
         if name in seen:
             if seen[name] != field:
@@ -63,6 +64,7 @@ def _build_field(
     name: str,
     declared_type: str,
     raw_argument: str | None,
+    required: bool,
 ) -> TemplateField:
     """Construct a :class:`TemplateField` from a marker's parts.
 
@@ -74,6 +76,8 @@ def _build_field(
         name: The field identifier.
         declared_type: The validated type name.
         raw_argument: The text inside the marker's parentheses, or ``None``.
+        required: Whether the field must be supplied (``False`` if the marker
+            carried a trailing ``?``).
 
     Returns:
         The constructed field.
@@ -81,14 +85,19 @@ def _build_field(
     if declared_type == "enum":
         options = _split_options(raw_argument)
         if not options:
-            return TemplateField(name=name, type="string")
-        return TemplateField(name=name, type="enum", options=options)
+            return TemplateField(name=name, type="string", required=required)
+        return TemplateField(
+            name=name, type="enum", options=options, required=required
+        )
     if declared_type == "date":
         date_format = raw_argument.strip() if raw_argument else None
         return TemplateField(
-            name=name, type="date", date_format=date_format or None
+            name=name,
+            type="date",
+            date_format=date_format or None,
+            required=required,
         )
-    return TemplateField(name=name, type=declared_type)
+    return TemplateField(name=name, type=declared_type, required=required)
 
 
 def _split_options(raw_argument: str | None) -> list[str]:

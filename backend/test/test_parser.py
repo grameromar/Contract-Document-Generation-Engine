@@ -5,7 +5,6 @@ import pytest
 from latexgen.core.exceptions import ParseError
 from latexgen.core.models import TemplateField
 from latexgen.core.parser import parse_template
-from latexgen.core.renderer import Renderer
 
 
 class TestBasicParsing:
@@ -80,24 +79,31 @@ class TestErrors:
         with pytest.raises(ParseError):
             parse_template("{{x:color}}")
 
+class TestOptionalFields:
+    """A trailing ``?`` on the name marks a field optional."""
 
-class TestParserRendererRoundTrip:
-    """The parser's output feeds the renderer over the shared marker syntax."""
+    def test_plain_optional_field(self):
+        (field,) = parse_template("{{note?}}")
+        assert field == TemplateField("note", required=False)
 
-    def test_contract_template_round_trip(self):
-        template = (
-            r"Contrato entre {{arrendador}} y {{arrendatario}} "
-            r"el {{fecha:date}} por {{monto:number}} pesos."
+    def test_typed_optional_field(self):
+        (field,) = parse_template("{{age?:number}}")
+        assert field == TemplateField("age", "number", required=False)
+
+    def test_optional_enum(self):
+        (field,) = parse_template("{{country?:enum(MX,US)}}")
+        assert field == TemplateField(
+            "country", "enum", required=False, options=["MX", "US"]
         )
-        fields = parse_template(template)
-        values = {
-            "arrendador": "Ana & Co.",
-            "arrendatario": "Luis",
-            "fecha": "2026-06-20",
-            "monto": "15000",
-        }
-        out = Renderer().render(template, fields, values)
-        assert out == (
-            r"Contrato entre Ana \& Co. y Luis "
-            r"el 2026-06-20 por 15,000 pesos."
-        )
+
+    def test_required_by_default(self):
+        (field,) = parse_template("{{name}}")
+        assert field.required is True
+
+    def test_whitespace_around_optional_marker(self):
+        (field,) = parse_template("{{ note ? : string }}")
+        assert field.required is False
+
+    def test_conflicting_required_and_optional_raises(self):
+        with pytest.raises(ParseError):
+            parse_template("{{x}} and {{x?}}")

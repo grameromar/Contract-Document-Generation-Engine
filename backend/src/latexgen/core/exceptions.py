@@ -48,3 +48,11 @@ class ParseError(LatexGenError):
     Covers unsupported field types and fields declared inconsistently across
     repeated markers.
     """
+
+class CompilerNotFoundError(LatexGenError):
+    """Raised when the LaTeX compiler executable cannot be found.
+
+    This is an environment/configuration problem rather than a fault in the
+    user's document, so it is raised instead of being reported as a failed
+    compilation result.
+    """

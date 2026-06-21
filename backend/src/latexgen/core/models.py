@@ -29,3 +29,21 @@ class TemplateField:
     required: bool = True
     options: list[str] = field(default_factory=list)
     date_format: str | None = None
+
+
+@dataclass
+class CompileResult:
+    """The outcome of compiling a LaTeX source to a PDF.
+
+    Attributes:
+        ok: Whether compilation produced a PDF.
+        pdf: The PDF bytes when ``ok`` is True, otherwise ``None``.
+        log: The raw compiler output, useful for debugging.
+        errors: Human-readable error lines extracted from the log when
+            compilation failed; empty on success.
+    """
+
+    ok: bool
+    pdf: bytes | None = None
+    log: str = ""
+    errors: list[str] = field(default_factory=list)

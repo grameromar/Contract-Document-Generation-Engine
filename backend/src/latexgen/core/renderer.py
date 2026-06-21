@@ -12,20 +12,11 @@ from __future__ import annotations
 
 import re
 
+
 from .escaping import DEFAULT_DATE_FORMAT, get_escaper
 from .exceptions import InvalidFieldValueError, MissingFieldsError
+from .markers import MARKER_PATTERN
 from .models import TemplateField
-
-# Matches a marker and captures only its field name. The optional ``:type(...)``
-# portion is ignored here because the field metadata already carries the type;
-# ``[^{}]`` keeps the match from running past the marker's closing braces.
-#
-# Examples:
-#   "{{ name }}"                  -> captures "name"
-#   "{{ total:number }}"          -> captures "total"
-#   "{{ start_date:date(%Y) }}"   -> captures "start_date"
-_MARKER_PATTERN = re.compile(r"\{\{\s*(\w+)\s*(?::[^{}]*)?\}\}")
-
 
 class Renderer:
     """Substitute ``{{field}}`` markers in a template with escaped values."""
@@ -67,7 +58,7 @@ class Renderer:
             # silently deleted, which surfaces template/field mismatches.
             return escaped.get(name, match.group(0))
 
-        return _MARKER_PATTERN.sub(_substitute, template)
+        return MARKER_PATTERN.sub(_substitute, template)
 
     def _escape_fields(
         self,

@@ -41,3 +41,10 @@ class InvalidFieldValueError(RenderError):
         self.field_name = field_name
         self.reason = reason
         super().__init__(f"Invalid value for field '{field_name}': {reason}")
+
+class ParseError(LatexGenError):
+    """Raised when a template's markers cannot be parsed.
+
+    Covers unsupported field types and fields declared inconsistently across
+    repeated markers.
+    """

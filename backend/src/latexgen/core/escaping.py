@@ -18,6 +18,7 @@ a caller-chosen pattern, a ``boolean`` is mapped to safe display text, and an
 
 from __future__ import annotations
 
+import re
 from datetime import date
 from typing import Callable
 
@@ -50,10 +51,20 @@ _LATEX_TRANSLATION_TABLE = str.maketrans(_LATEX_SPECIAL_CHARACTERS)
 # strftime pattern used when a caller does not request a specific date format.
 DEFAULT_DATE_FORMAT = "%Y-%m-%d"
 
-# Textual representations (English and Spanish) accepted as boolean "true".
+# Textual representations (English and Spanish) accepted as boolean "true" and
+# "false". A value matching neither set is rejected rather than silently treated
+# as false, so typos surface as errors instead of producing wrong output.
 _TRUTHY_STRINGS = frozenset(
     {"true", "1", "yes", "y", "si", "sí", "on", "verdadero"}
 )
+_FALSY_STRINGS = frozenset(
+    {"false", "0", "no", "n", "off", "falso", ""}
+)
+
+# Pattern used to validate numeric input once any grouping separators have been
+# removed. Grouping commas are stripped unconditionally, so even malformed
+# grouping such as "1,23,45" is accepted and treated as the ungrouped number.
+_NUMBER_PATTERN = re.compile(r"^-?\d+(\.\d+)?$")
 
 # A callable that converts a single raw field value into a LaTeX-safe string.
 Escaper = Callable[[object], str]
@@ -71,8 +82,8 @@ def escape_latex(text: str) -> str:
         a sequence that renders it literally.
 
     Example:
-        >>> print(escape_latex("50% off & more"))
-        50\% off \& more
+        >>> escape_latex("50% off & more")
+        '50\\\\% off \\\\& more'
     """
     return text.translate(_LATEX_TRANSLATION_TABLE)
 
@@ -88,36 +99,46 @@ def _escape_string(value: object) -> str:
         value: The raw value entered by the user.
 
     Returns:
-        The stringified value with all LaTeX special characters escaped.
+        The stringified value with all LaTeX special characters escaped. A
+        ``None`` value (an unfilled optional field) renders as an empty string
+        rather than the literal text "None".
     """
+    if value is None:
+        return ""
     return escape_latex(str(value))
 
 
 def _escape_number(value: object) -> str:
     """Validate that ``value`` is numeric and format it with grouping.
 
-    Integers, floats and numeric strings are accepted. Grouping separators
-    already present in a string input are stripped before parsing, so an input
-    of ``"1,250"`` is treated as ``1250``. Integer-valued inputs are rendered
-    without a decimal part.
+    Integers, floats and numeric strings are accepted. Grouping commas in a
+    string input are stripped before validation, even when malformed (so
+    ``"1,23,45"`` is treated as ``12345``); the comma is purely cosmetic.
 
     Args:
         value: The raw value, expected to represent a number.
 
     Returns:
         The number formatted with commas as thousands separators, e.g.
-        ``"1,234,567"`` or ``"1,234,567.89"``.
+        ``"1,234,567"`` or ``"1,234,567.89"``. Decimal notation present in the
+        input is preserved (``"1500.0"`` -> ``"1,500.0"``).
 
     Raises:
-        ValueError: If ``value`` cannot be interpreted as a number.
+        ValueError: If ``value`` is not numeric once grouping separators are
+            removed.
     """
-    try:
-        number = float(str(value).replace(",", "").strip())
-    except (TypeError, ValueError):
+    # Strip every grouping comma before validating. This intentionally accepts
+    # malformed grouping (e.g. "1,23,45" becomes 12345) rather than rejecting
+    # it; the comma is treated purely as a cosmetic separator.
+    digits = str(value).replace(",", "").strip()
+    if not _NUMBER_PATTERN.match(digits):
         raise ValueError(f"Expected a numeric value, received: {value!r}")
-    if number.is_integer():
-        return f"{int(number):,}"
-    return f"{number:,}"
+    number = float(digits)
+    # Preserve the decimal notation the input used: "1500" -> "1,500" but
+    # "1500.0" -> "1,500.0". Grouping is applied to the integer part either way.
+    if "." in digits:
+        return f"{number:,}"
+    return f"{int(number):,}"
 
 
 def _make_date_escaper(date_format: str = DEFAULT_DATE_FORMAT) -> Escaper:
@@ -178,13 +199,20 @@ def _escape_boolean(value: object) -> str:
         value: The raw value to interpret as a boolean.
 
     Returns:
-        ``"Sí"`` when the value is truthy, ``"No"`` otherwise.
+        ``"Sí"`` when the value is truthy, ``"No"`` when falsy.
+
+    Raises:
+        ValueError: If the value matches neither the truthy nor the falsy set,
+            so typos surface as errors instead of silently rendering "No".
     """
     if isinstance(value, bool):
-        is_true = value
-    else:
-        is_true = str(value).strip().lower() in _TRUTHY_STRINGS
-    return "Sí" if is_true else "No"
+        return "Sí" if value else "No"
+    text = str(value).strip().lower()
+    if text in _TRUTHY_STRINGS:
+        return "Sí"
+    if text in _FALSY_STRINGS:
+        return "No"
+    raise ValueError(f"Cannot interpret value as boolean: {value!r}")
 
 
 def _make_enum_escaper(options: list[str]) -> Escaper:
@@ -258,7 +286,11 @@ def get_escaper(
         ValueError: If ``field_type`` has no associated escaper.
     """
     if field_type == "enum":
-        return _make_enum_escaper(options or [])
+        # An enum with no declared options carries no constraint, so it behaves
+        # like a free-text string field.
+        if not options:
+            return _escape_string
+        return _make_enum_escaper(options)
     if field_type == "date":
         return _make_date_escaper(date_format)
     try:

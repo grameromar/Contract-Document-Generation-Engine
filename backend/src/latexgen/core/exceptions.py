@@ -56,3 +56,20 @@ class CompilerNotFoundError(LatexGenError):
     user's document, so it is raised instead of being reported as a failed
     compilation result.
     """
+
+class CompileError(LatexGenError):
+    """Raised when rendered LaTeX source fails to compile to a PDF.
+
+    The service raises this from a failed :class:`~latexgen.core.models.
+    CompileResult`, turning the compiler's data result into a domain exception
+    that the delivery layer can map to a user-facing error.
+
+    Attributes:
+        errors: Human-readable error lines extracted from the compiler output.
+        log: The full compiler output, for debugging.
+    """
+
+    def __init__(self, errors: list[str], log: str = "") -> None:
+        self.errors = list(errors)
+        self.log = log
+        super().__init__("; ".join(self.errors) or "LaTeX compilation failed.")

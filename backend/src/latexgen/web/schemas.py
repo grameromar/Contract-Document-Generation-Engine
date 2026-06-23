@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 class FieldSchema(BaseModel):
     """JSON representation of a :class:`~latexgen.core.models.TemplateField`.
 

@@ -1,0 +1,7 @@
+# Application configuration (non-code settings live here, not in .py files).
+
+# Frontend dev-server origins allowed by CORS during development.
+# Production origins are configured per deployment.
+cors_origins:
+  - "http://localhost:5173"
+  - "http://127.0.0.1:5173"

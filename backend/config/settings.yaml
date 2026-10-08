@@ -5,3 +5,10 @@
 cors_origins:
   - "http://localhost:5173"
   - "http://127.0.0.1:5173"
+
+# LaTeX engine.
+# tectonic_path: executable name (looked up on the PATH) or a full path.
+# compile_timeout: maximum seconds one compilation may run before it is
+#   reported as a failure.
+tectonic_path: "tectonic"
+compile_timeout: 30.0

@@ -39,10 +39,10 @@ git diff feature/backend/web feature/backend/web-generate-endpoint</code></pre>
   <tr><td><code>src/latexgen/web/main.py</code></td><td><code>create_app()</code>: crea la app FastAPI, configura CORS con los orígenes del YAML, registra los manejadores de errores y monta el router. Al final del módulo, <code>app = create_app()</code>.</td></tr>
   <tr><td><code>src/latexgen/web/routes.py</code></td><td><code>POST /parse</code>. Sin <code>try/except</code>: los errores los atrapan los manejadores.</td></tr>
   <tr><td><code>src/latexgen/web/schemas.py</code></td><td>Modelos Pydantic: <code>FieldSchema</code> (con <code>from_attributes=True</code> para construirse desde el dataclass), <code>ParseRequest</code>, <code>ParseResponse</code>.</td></tr>
-  <tr><td><code>src/latexgen/web/dependencies.py</code></td><td><code>get_service()</code> con <code>@lru_cache</code>: un único <code>TemplateService()</code> compartido, sustituible en pruebas con <code>app.dependency_overrides</code>.</td></tr>
+  <tr><td><code>src/latexgen/web/dependencies.py</code></td><td><code>get_service()</code> con <code>@lru_cache</code>: un único <code>TemplateService</code> compartido, con su <code>TectonicCompiler</code> construido desde la configuración. Sustituible en pruebas con <code>app.dependency_overrides</code>.</td></tr>
   <tr><td><code>src/latexgen/web/errors.py</code></td><td><code>register_exception_handlers(app)</code>: traduce cada excepción del core a una respuesta JSON.</td></tr>
   <tr><td><code>src/latexgen/web/config.py</code></td><td><code>load_settings()</code>: lee el YAML con PyYAML y lo valida con el modelo Pydantic <code>Settings</code>.</td></tr>
-  <tr><td><code>config/settings.yaml</code></td><td>Configuración: hoy solo <code>cors_origins</code>.</td></tr>
+  <tr><td><code>config/settings.yaml</code></td><td>Configuración: <code>cors_origins</code>, <code>tectonic_path</code> y <code>compile_timeout</code>.</td></tr>
   <tr><td><code>test/unit/test_web_parse.py</code></td><td>7 pruebas de <code>/parse</code> con <code>TestClient</code>.</td></tr>
   <tr><td><code>pyproject.toml</code></td><td>Añade <code>fastapi&gt;=0.110</code>, <code>uvicorn[standard]&gt;=0.29</code>, <code>pyyaml&gt;=6.0</code>, y <code>httpx&gt;=0.27</code> en <code>dev</code>. Filtra el aviso de Starlette sobre <code>httpx</code> en las pruebas.</td></tr>
 </table></div>
@@ -141,8 +141,19 @@ git diff feature/backend/web feature/backend/web-generate-endpoint</code></pre>
 <pre><code><span class="c"># backend/config/settings.yaml (en la rama)</span>
 cors_origins:
   - <span class="s">"http://localhost:5173"</span>
-  - <span class="s">"http://127.0.0.1:5173"</span></code></pre>
+  - <span class="s">"http://127.0.0.1:5173"</span>
+
+<span class="c"># LaTeX engine.</span>
+tectonic_path: <span class="s">"tectonic"</span>
+compile_timeout: 30.0</code></pre>
+<div class="table-wrap"><table>
+  <tr><th>Clave</th><th>Obligatoria</th><th>Qué controla</th></tr>
+  <tr><td><code>cors_origins</code></td><td>sí</td><td>Orígenes del frontend que pueden llamar a la API.</td></tr>
+  <tr><td><code>tectonic_path</code></td><td>no, <code>"tectonic"</code></td><td>Nombre del ejecutable (se busca en el PATH) o ruta completa.</td></tr>
+  <tr><td><code>compile_timeout</code></td><td>no, <code>30.0</code></td><td>Segundos máximos por compilación; debe ser mayor que 0. Al agotarse, la compilación cuenta como fallida.</td></tr>
+</table></div>
 <p><code>load_settings(path=None)</code> busca el archivo en este orden: el argumento <code>path</code>, la variable de entorno <code>LATEXGEN_CONFIG</code>, y <code>backend/config/settings.yaml</code> resuelto desde la ubicación de <code>config.py</code> (no desde el directorio actual). Un YAML vacío o sin <code>cors_origins</code> falla al validar con Pydantic.</p>
+<p><code>get_service()</code> lee la configuración en su primera llamada y construye <code>TectonicCompiler(tectonic_path, compile_timeout)</code>. Como el resultado queda en caché, un cambio en el YAML se aplica al reiniciar el servidor.</p>
 <div class="callout warn">
   <div class="callout-title">La configuración se lee al importar</div>
   <p>Como <code>main.py</code> ejecuta <code>app = create_app()</code> a nivel de módulo, importar <code>latexgen.web.main</code> ya lee el YAML. Si el archivo no se encuentra, la importación falla.</p>

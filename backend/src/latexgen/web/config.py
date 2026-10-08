@@ -1,7 +1,7 @@
 """Application settings loaded from a YAML configuration file.
 
-Configuration that is not code -- the allowed CORS origins today, other
-deployment knobs later -- lives in ``config/settings.yaml`` rather than being
+Configuration that is not code -- the allowed CORS origins and the LaTeX
+engine settings -- lives in ``config/settings.yaml`` rather than being
 hard-coded in Python, so it can change per environment without editing source.
 PyYAML reads the file into a plain dict; a Pydantic model then validates its
 shape, so a malformed config fails fast at startup with a clear error.
@@ -13,7 +13,7 @@ import os
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # Default location: backend/config/settings.yaml, resolved relative to this
 # file. From web/config.py the parents are: [0]=web [1]=latexgen [2]=src
@@ -24,9 +24,19 @@ _DEFAULT_CONFIG_PATH = (
 
 
 class Settings(BaseModel):
-    """Validated application configuration."""
+    """Validated application configuration.
+
+    Attributes:
+        cors_origins: Frontend origins allowed by CORS.
+        tectonic_path: Tectonic executable name (looked up on the PATH) or
+            full path. Defaults to ``"tectonic"``.
+        compile_timeout: Maximum seconds a single compilation may run; must be
+            positive. Defaults to ``30.0``.
+    """
 
     cors_origins: list[str]
+    tectonic_path: str = "tectonic"
+    compile_timeout: float = Field(default=30.0, gt=0)
 
 
 def load_settings(path: Path | None = None) -> Settings:

@@ -93,7 +93,7 @@ pytest</code></pre>
   <tr><th>#</th><th>Qué</th><th>Efecto</th></tr>
   <tr><td>1</td><td><code>.gitignore</code> idéntico en la raíz y en <code>backend/</code>.</td><td>Reglas duplicadas que hay que mantener en dos sitios.</td></tr>
   <tr><td>2</td><td>Los metadatos de instalación (<code>latexgen.egg-info</code>, ignorados por git) listan la capa web y sus dependencias, que no están en <code>main</code>.</td><td>Ninguno en ejecución; se regeneran al reinstalar.</td></tr>
-  <tr><td>3</td><td><code>tectonic_path</code> y <code>timeout</code> solo se pueden cambiar en el constructor de <code>TectonicCompiler</code>; <code>TemplateService()</code> usa los valores por defecto.</td><td>Para usar otra ruta hay que construir el compilador e inyectarlo.</td></tr>
+  <tr><td>3</td><td>En el core, <code>tectonic_path</code> y <code>timeout</code> solo se pueden cambiar en el constructor de <code>TectonicCompiler</code>; <code>TemplateService()</code> usa los valores por defecto.</td><td>Desde código hay que construir el compilador e inyectarlo. En la rama web ya se leen de <code>settings.yaml</code>.</td></tr>
   <tr><td>4</td><td>El antiguo <code>CONTEXT.md</code> (sin seguimiento) describía como hecho el endpoint <code>/generate</code>, <code>test_web_generate</code> y unas 138 pruebas.</td><td>Sustituido por <code>CLAUDE.md</code> y esta guía.</td></tr>
 </table></div>
 
@@ -108,7 +108,7 @@ pytest</code></pre>
 <ul>
   <li><strong><code>POST /generate</code></strong>: ruta, respuesta PDF y pruebas (solo existe <code>GenerateRequest</code>, en <code>feature/backend/web-generate-endpoint</code>).</li>
   <li><strong>Frontend</strong>: React con TypeScript (Vite). Cargar el <code>.tex</code>, llamar a <code>/parse</code>, formulario con un control por tipo (texto, número, selector de fecha, casilla, lista), enviar a <code>/generate</code>, descargar el PDF y mostrar los errores.</li>
-  <li><strong>Pulido del backend</strong>: Dockerfile (Tectonic más <code>fontconfig</code> en Debian slim) y leer <code>tectonic_path</code> desde la configuración o una variable de entorno.</li>
+  <li><strong>Pulido del backend</strong>: Dockerfile (Tectonic más <code>fontconfig</code> en Debian slim).</li>
   <li><strong>Opcionales</strong>: subir la plantilla como archivo multipart, y endurecer el aislamiento de la compilación para producción.</li>
 </ul>
 

@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Capa web · latexgen</title>
+<link rel="stylesheet" href="guide.css">
+<script>try{var t=localStorage.getItem("latexgen-guide-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="content" id="content">
+
+<p class="eyebrow">En desarrollo</p>
+<h1>Capa web</h1>
+<p class="lead">Adaptador FastAPI que expone el core por HTTP. Hoy tiene un endpoint, <code>POST /parse</code>, y el comienzo de <code>POST /generate</code>.</p>
+
+<div class="dev-banner">
+  <span class="badge dev">rama</span>
+  <div>
+    <strong>Nada de esta página está en <code>main</code>.</strong> El código vive en la rama local <code>feature/backend/web</code> (commit <code>0821da7</code>, 2026-06-24), que no se ha fusionado ni subido al remoto. La rama <code>feature/backend/web-generate-endpoint</code> apunta al mismo commit, y sobre ella hay un stash del 2026-07-03 con el inicio de <code>/generate</code>. Todo lo descrito aquí se verificó en una copia temporal de la rama, sin cambiar de rama en el repositorio.
+  </div>
+</div>
+
+<h2>Cómo verla</h2>
+<pre><code><span class="c"># leer un archivo sin cambiar de rama</span>
+git show feature/backend/web:backend/src/latexgen/web/routes.py
+
+<span class="c"># o cambiar a la rama (con el árbol de trabajo limpio)</span>
+git switch feature/backend/web
+
+<span class="c"># ver el contenido del stash</span>
+git stash show -p stash@{0}</code></pre>
+
+<h2>Qué añade la rama</h2>
+<div class="table-wrap"><table>
+  <tr><th>Archivo</th><th>Responsabilidad</th></tr>
+  <tr><td><code>src/latexgen/web/main.py</code></td><td><code>create_app()</code>: crea la app FastAPI, configura CORS con los orígenes del YAML, registra los manejadores de errores y monta el router. Al final del módulo, <code>app = create_app()</code>.</td></tr>
+  <tr><td><code>src/latexgen/web/routes.py</code></td><td><code>POST /parse</code>. Sin <code>try/except</code>: los errores los atrapan los manejadores.</td></tr>
+  <tr><td><code>src/latexgen/web/schemas.py</code></td><td>Modelos Pydantic: <code>FieldSchema</code> (con <code>from_attributes=True</code> para construirse desde el dataclass), <code>ParseRequest</code>, <code>ParseResponse</code>.</td></tr>
+  <tr><td><code>src/latexgen/web/dependencies.py</code></td><td><code>get_service()</code> con <code>@lru_cache</code>: un único <code>TemplateService()</code> compartido, sustituible en pruebas con <code>app.dependency_overrides</code>.</td></tr>
+  <tr><td><code>src/latexgen/web/errors.py</code></td><td><code>register_exception_handlers(app)</code>: traduce cada excepción del core a una respuesta JSON.</td></tr>
+  <tr><td><code>src/latexgen/web/config.py</code></td><td><code>load_settings()</code>: lee el YAML con PyYAML y lo valida con el modelo Pydantic <code>Settings</code>.</td></tr>
+  <tr><td><code>config/settings.yaml</code></td><td>Configuración: hoy solo <code>cors_origins</code>.</td></tr>
+  <tr><td><code>test/unit/test_web_parse.py</code></td><td>7 pruebas de <code>/parse</code> con <code>TestClient</code>.</td></tr>
+  <tr><td><code>pyproject.toml</code></td><td>Añade <code>fastapi&gt;=0.110</code>, <code>uvicorn[standard]&gt;=0.29</code>, <code>pyyaml&gt;=6.0</code>, y <code>httpx&gt;=0.27</code> en <code>dev</code>.</td></tr>
+</table></div>
+<p>La capa web solo traduce: no tiene lógica de negocio, y Pydantic queda fuera del core.</p>
+
+<h2>Flujo de una petición</h2>
+<figure class="diagram">
+<svg viewBox="0 0 780 230" role="img" aria-label="Flujo de una petición a POST /parse">
+  <defs>
+    <marker id="w1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head-dev"/></marker>
+    <marker id="w2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head-err"/></marker>
+  </defs>
+  <rect x="10" y="40" width="110" height="52" rx="9" class="box"/>
+  <text x="65" y="62" text-anchor="middle" class="t">Cliente</text><text x="65" y="80" text-anchor="middle" class="t-sm">{"template": …}</text>
+  <rect x="140" y="40" width="110" height="52" rx="9" class="box-dev"/>
+  <text x="195" y="62" text-anchor="middle" class="t">CORS</text><text x="195" y="80" text-anchor="middle" class="t-sm">orígenes del YAML</text>
+  <rect x="270" y="40" width="110" height="52" rx="9" class="box-dev"/>
+  <text x="325" y="62" text-anchor="middle" class="t-mono">POST /parse</text><text x="325" y="80" text-anchor="middle" class="t-sm">routes.py</text>
+  <rect x="400" y="40" width="110" height="52" rx="9" class="box-dev"/>
+  <text x="455" y="62" text-anchor="middle" class="t-mono">get_service</text><text x="455" y="80" text-anchor="middle" class="t-sm">instancia única</text>
+  <rect x="530" y="40" width="110" height="52" rx="9" class="box-accent"/>
+  <text x="585" y="62" text-anchor="middle" class="t-mono">.parse()</text><text x="585" y="80" text-anchor="middle" class="t-sm">core</text>
+  <rect x="660" y="40" width="110" height="52" rx="9" class="box-dev"/>
+  <text x="715" y="62" text-anchor="middle" class="t">200</text><text x="715" y="80" text-anchor="middle" class="t-sm">{"fields": [...]}</text>
+  <line x1="120" y1="66" x2="138" y2="66" class="line-dev" marker-end="url(#w1)"/>
+  <line x1="250" y1="66" x2="268" y2="66" class="line-dev" marker-end="url(#w1)"/>
+  <line x1="380" y1="66" x2="398" y2="66" class="line-dev" marker-end="url(#w1)"/>
+  <line x1="510" y1="66" x2="528" y2="66" class="line-dev" marker-end="url(#w1)"/>
+  <line x1="640" y1="66" x2="658" y2="66" class="line-dev" marker-end="url(#w1)"/>
+  <text x="325" y="114" text-anchor="middle" class="t-err">cuerpo inválido: 422 de Pydantic</text>
+
+  <rect x="530" y="140" width="110" height="52" rx="9" class="box-err"/>
+  <text x="585" y="162" text-anchor="middle" class="t-mono">errors.py</text><text x="585" y="180" text-anchor="middle" class="t-sm">manejador</text>
+  <line x1="585" y1="92" x2="585" y2="138" class="line-err" marker-end="url(#w2)"/>
+  <text x="595" y="122" class="t-err">ParseError</text>
+  <path d="M530 166 H65 V94" class="line-err" marker-end="url(#w2)"/>
+  <text x="300" y="158" text-anchor="middle" class="t-err">422 {"detail": "Unsupported type …"}</text>
+</svg>
+<figcaption>Camino feliz arriba; errores del dominio abajo. La validación del cuerpo la hace FastAPI antes de llegar a la ruta.</figcaption>
+</figure>
+
+<h2><code>POST /parse</code></h2>
+<p>Devuelve los campos de una plantilla para que el frontend construya el formulario. La plantilla viaja como texto dentro del JSON, no como archivo.</p>
+<div class="tabs">
+  <div class="tab-list" role="tablist">
+    <button type="button">200</button>
+    <button type="button">422 dominio</button>
+    <button type="button">422 validación</button>
+  </div>
+  <div class="tab-panel">
+<pre><code>POST /parse
+{"template": "{{cliente}} {{monto?:number}} {{pais:enum(MX,US)}} {{f:date(%d/%m/%Y)}}"}
+
+200 OK
+{"fields": [
+  {"name": "cliente", "type": "string", "required": true,
+   "options": [], "date_format": null},
+  {"name": "monto", "type": "number", "required": false,
+   "options": [], "date_format": null},
+  {"name": "pais", "type": "enum", "required": true,
+   "options": ["MX", "US"], "date_format": null},
+  {"name": "f", "type": "date", "required": true,
+   "options": [], "date_format": "%d/%m/%Y"}
+]}</code></pre>
+  </div>
+  <div class="tab-panel">
+<pre><code>POST /parse
+{"template": "{{x:color}}"}
+
+422 Unprocessable Entity
+{"detail": "Unsupported type 'color' for field 'x'. Valid types: boolean, date, enum, number, string."}</code></pre>
+  </div>
+  <div class="tab-panel">
+<pre><code>POST /parse
+{}
+
+422 Unprocessable Entity
+{"detail": [{"type": "missing", "loc": ["body", "template"], "msg": "Field required", "input": {}}]}</code></pre>
+  </div>
+</div>
+<p>Respuestas reales obtenidas del servidor de la rama con uvicorn. Con el encabezado <code>Origin: http://localhost:5173</code>, la respuesta trae <code>access-control-allow-origin</code> para ese origen.</p>
+
+<h2 id="errores-a-http">Errores a HTTP</h2>
+<p>Los documentos inválidos del usuario dan 422; la falta del compilador, que es un problema del servidor, da 503.</p>
+<div class="table-wrap"><table>
+  <tr><th>Excepción del core</th><th>Código</th><th>Cuerpo JSON</th></tr>
+  <tr><td><code>ParseError</code></td><td>422</td><td><code>{"detail": str(exc)}</code></td></tr>
+  <tr><td><code>MissingFieldsError</code></td><td>422</td><td><code>{"detail": str(exc), "missing_fields": exc.missing_fields}</code></td></tr>
+  <tr><td><code>InvalidFieldValueError</code></td><td>422</td><td><code>{"detail": str(exc), "field": exc.field_name}</code></td></tr>
+  <tr><td><code>CompileError</code></td><td>422</td><td><code>{"detail": "LaTeX compilation failed.", "errors": exc.errors}</code></td></tr>
+  <tr><td><code>CompilerNotFoundError</code></td><td>503</td><td><code>{"detail": str(exc)}</code></td></tr>
+</table></div>
+<p>Solo <code>ParseError</code> puede ocurrir hoy, porque <code>/parse</code> es el único endpoint. Los demás manejadores ya están registrados para <code>/generate</code>. El <code>log</code> de <code>CompileError</code> no se envía al cliente.</p>
+
+<h2>Configuración</h2>
+<pre><code><span class="c"># backend/config/settings.yaml (en la rama)</span>
+cors_origins:
+  - <span class="s">"http://localhost:5173"</span>
+  - <span class="s">"http://127.0.0.1:5173"</span></code></pre>
+<p><code>load_settings(path=None)</code> busca el archivo en este orden: el argumento <code>path</code>, la variable de entorno <code>LATEXGEN_CONFIG</code>, y <code>backend/config/settings.yaml</code> resuelto desde la ubicación de <code>config.py</code> (no desde el directorio actual). Un YAML vacío o sin <code>cors_origins</code> falla al validar con Pydantic.</p>
+<div class="callout warn">
+  <div class="callout-title">La configuración se lee al importar</div>
+  <p>Como <code>main.py</code> ejecuta <code>app = create_app()</code> a nivel de módulo, importar <code>latexgen.web.main</code> ya lee el YAML. Si el archivo no se encuentra, la importación falla.</p>
+</div>
+
+<h2>Arrancar el servidor</h2>
+<p>Con la rama activa e instaladas sus dependencias (<code>pip install -e ".[dev]"</code> desde <code>backend/</code>):</p>
+<pre><code>uvicorn latexgen.web.main:app --reload</code></pre>
+<p>Probado con <code>uvicorn latexgen.web.main:app --port 8765</code>: arranca y responde. FastAPI sirve la documentación automática de la API en <code>/docs</code>.</p>
+
+<h2><code>POST /generate</code>: lo que hay</h2>
+<p>El stash <code>stash@{0}</code> solo añade a <code>schemas.py</code> este modelo. No hay ruta: hoy <code>POST /generate</code> responde 404.</p>
+<pre><code><span class="k">class</span> <span class="f">GenerateRequest</span>(BaseModel):
+    template: str = Field(..., description=<span class="s">"Raw .tex template text."</span>)
+    values: dict[str, str | int | float | bool | None] = Field(
+        default_factory=dict,
+        description=<span class="s">"Field name -&gt; value supplied by the user."</span>,
+    )</code></pre>
+<div class="callout dev">
+  <div class="callout-title">Plan del desarrollador (no implementado)</div>
+  <p>Según sus notas: <code>POST /generate</code> correrá el pipeline completo y devolverá el PDF binario con <code>media_type="application/pdf"</code> y <code>Content-Disposition: attachment</code>, con pruebas en <code>test_web_generate.py</code>. El frontend leerá el <code>.tex</code> con <code>FileReader</code> y mandará su contenido como texto.</p>
+</div>
+
+</main>
+<nav class="toc" id="toc" aria-label="En esta página"></nav>
+</div>
+<script src="guide.js"></script>
+</body>
+</html>

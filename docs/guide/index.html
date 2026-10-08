@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inicio · latexgen</title>
+<link rel="stylesheet" href="guide.css">
+<script>try{var t=localStorage.getItem("latexgen-guide-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="content" id="content">
+
+<p class="eyebrow">Guía técnica</p>
+<h1>latexgen</h1>
+<p class="lead">Biblioteca en Python que convierte una plantilla LaTeX con campos dinámicos y tipados en un PDF: detecta los campos, valida y escapa los valores según su tipo, los sustituye y compila el resultado con Tectonic.</p>
+
+<div class="callout">
+  <div class="callout-title">Qué describe esta guía</div>
+  <p>Lo implementado en la rama <code>main</code>, commit <code>0bd2e3e</code> (igual a <code>origin/main</code>), verificado contra el código y las pruebas el 2026-10-07. Lo que existe solo en ramas locales o en el stash aparece aparte, en <a href="web.html">Capa web</a>, marcado como <span class="badge dev">en desarrollo</span>.</p>
+</div>
+
+<h2>Qué hace hoy</h2>
+<p>En <code>main</code> el proyecto es una biblioteca: no hay servidor, interfaz ni línea de comandos. Su punto de entrada es la clase <code>TemplateService</code> <a class="src" href="../../backend/src/latexgen/core/service.py">service.py:19</a>, con dos operaciones:</p>
+<ul>
+  <li><code>parse(template)</code> devuelve la lista de campos que declara la plantilla, para construir un formulario.</li>
+  <li><code>generate(template, values)</code> devuelve los bytes del PDF ya compilado.</li>
+</ul>
+<pre><code><span class="k">from</span> latexgen.core.service <span class="k">import</span> TemplateService
+
+template = <span class="s">r"""\documentclass{article}
+\begin{document}
+Contrato con {{cliente}} por \${{monto:number}} desde el {{inicio:date(%d/%m/%Y)}}.
+Notas: {{notas?}}
+\end{document}"""</span>
+
+service = TemplateService()          <span class="c"># usa TectonicCompiler por defecto</span>
+fields = service.parse(template)     <span class="c"># [TemplateField(name='cliente', ...), ...]</span>
+pdf = service.generate(template, {
+    <span class="s">"cliente"</span>: <span class="s">"Pérez &amp; Hijos"</span>,      <span class="c"># el &amp; se escapa solo</span>
+    <span class="s">"monto"</span>: <span class="s">"1500000"</span>,              <span class="c"># sale como 1,500,000</span>
+    <span class="s">"inicio"</span>: <span class="s">"2026-10-07"</span>,          <span class="c"># sale como 07/10/2026</span>
+})                                   <span class="c"># "notas" es opcional: queda vacío</span>
+open(<span class="s">"contrato.pdf"</span>, <span class="s">"wb"</span>).write(pdf)</code></pre>
+<p>La sintaxis <code>{{nombre?:tipo(argumento)}}</code> se explica en <a href="markers.html">Marcadores y tipos</a>. Puedes probarla en vivo en la <a href="pipeline.html#demostracion-interactiva">demostración interactiva</a>.</p>
+
+<h2>Estado por componente</h2>
+<div class="card">
+  <div class="status-row"><span class="status-name">Core</span><span><span class="badge ok">hecho</span></span><span>Parser, escaping, renderer, compiler y service en <code>main</code>. Solo usa la biblioteca estándar de Python más el ejecutable de Tectonic.</span></div>
+  <div class="status-row"><span class="status-name">Pruebas del core</span><span><span class="badge ok">143 pasan</span></span><span>Unitarias y de integración, incluidas las que compilan con Tectonic real (aquí no se saltan porque Tectonic está instalado). Ver <a href="testing.html">Pruebas</a>.</span></div>
+  <div class="status-row"><span class="status-name">Capa web: <code>POST /parse</code></span><span><span class="badge dev">rama local</span></span><span>FastAPI en <code>feature/backend/web</code>, sin fusionar ni subir al remoto. Con sus 7 pruebas propias, la rama pasa 150.</span></div>
+  <div class="status-row"><span class="status-name">Capa web: <code>POST /generate</code></span><span><span class="badge warn">empezado</span></span><span>Solo existe el esquema <code>GenerateRequest</code>, guardado en un stash. No hay ruta ni pruebas.</span></div>
+  <div class="status-row"><span class="status-name">Frontend</span><span><span class="badge muted">sin empezar</span></span><span>No hay código. El plan del desarrollador es React con TypeScript y Vite.</span></div>
+  <div class="status-row"><span class="status-name">Despliegue</span><span><span class="badge muted">sin empezar</span></span><span>No hay Dockerfile ni configuración de despliegue.</span></div>
+</div>
+
+<h2>Mapa de la guía</h2>
+<div class="grid">
+  <a class="card" href="architecture.html"><div class="card-title">Arquitectura</div><p>Capas, dependencias entre módulos y patrones de diseño.</p></a>
+  <a class="card" href="pipeline.html"><div class="card-title">Flujo de ejecución</div><p>Qué pasa, paso a paso, al generar un PDF. Incluye la demostración.</p></a>
+  <a class="card" href="markers.html"><div class="card-title">Marcadores y tipos</div><p>Gramática de los marcadores y reglas exactas de cada tipo.</p></a>
+  <a class="card" href="reference.html"><div class="card-title">Referencia del core</div><p>Firmas, parámetros, retornos y errores de cada módulo.</p></a>
+  <a class="card" href="errors.html"><div class="card-title">Errores</div><p>Jerarquía de excepciones y qué etapa lanza cada una.</p></a>
+  <a class="card" href="testing.html"><div class="card-title">Pruebas</div><p>Cómo correrlas, qué cubren y cómo evitan depender de Tectonic.</p></a>
+  <a class="card" href="web.html"><div class="card-title">Capa web <span class="badge dev">rama</span></div><p>La API FastAPI que vive en una rama local.</p></a>
+  <a class="card" href="project.html"><div class="card-title">Proyecto y git</div><p>Entorno, configuración, repositorio remoto, ramas y discrepancias.</p></a>
+</div>
+
+<h2>Glosario</h2>
+<div class="table-wrap"><table>
+  <tr><th>Término</th><th>Significado en este proyecto</th></tr>
+  <tr><td>Plantilla</td><td>Texto de un documento <code>.tex</code> con marcadores. Llega al core como <code>str</code>, nunca como archivo.</td></tr>
+  <tr><td>Marcador</td><td>Un trozo <code>{{…}}</code> que declara un campo, por ejemplo <code>{{monto:number}}</code>.</td></tr>
+  <tr><td>Campo</td><td>Un <code>TemplateField</code>: nombre, tipo, si es obligatorio, opciones (enum) y formato (date).</td></tr>
+  <tr><td>Escaper</td><td>Función que valida, da formato y vuelve seguro para LaTeX el valor de un campo según su tipo.</td></tr>
+  <tr><td>Compilador</td><td>Implementación de la interfaz <code>Compiler</code> que convierte LaTeX en PDF. Hoy solo existe <code>TectonicCompiler</code>.</td></tr>
+  <tr><td>Tectonic</td><td>Motor LaTeX en un solo ejecutable que descarga los paquetes que necesita. Se instala aparte; no es un paquete de pip.</td></tr>
+</table></div>
+
+<p class="footer-note">Fuentes enlazadas con rutas relativas al repositorio: abre la guía desde <code>docs/guide/</code> dentro del proyecto para que funcionen.</p>
+</main>
+<nav class="toc" id="toc" aria-label="En esta página"></nav>
+</div>
+<script src="guide.js"></script>
+</body>
+</html>

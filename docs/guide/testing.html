@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pruebas · latexgen</title>
+<link rel="stylesheet" href="guide.css">
+<script>try{var t=localStorage.getItem("latexgen-guide-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="content" id="content">
+
+<p class="eyebrow">Calidad</p>
+<h1>Pruebas</h1>
+<p class="lead">pytest, separadas en unitarias e integración, con técnicas para probar casi todo sin depender del motor LaTeX.</p>
+
+<h2>Cómo correrlas</h2>
+<p>Desde <code>backend/</code>, con el entorno virtual del proyecto (PowerShell):</p>
+<pre><code>cd backend
+.\.venv\Scripts\Activate.ps1
+pip install -e ".[dev]"
+pytest test</code></pre>
+<p>Indica la carpeta <code>test</code> de forma explícita: <code>pyproject.toml</code> declara <code>testpaths = ["tests"]</code>, carpeta que no existe. Con <code>pytest</code> a secas igual se encuentran todas, pero pytest avisa <em>No files were found in testpaths</em> y busca desde el directorio actual.</p>
+<p>Para una sola capa o archivo: <code>pytest test/unit</code>, <code>pytest test/unit/test_parser.py</code>, o <code>pytest -k enum</code> para filtrar por nombre.</p>
+
+<h2>Último resultado</h2>
+<div class="callout ok">
+  <div class="callout-title">143 pasan, 0 fallan, 0 se saltan</div>
+  <p>Corrida del 2026-10-07 sobre <code>main</code> (<code>0bd2e3e</code>) en unos 32 segundos, con Python 3.11.3, pytest 9.1.1 y Tectonic 0.16.9 en el PATH. Las pruebas que compilan de verdad se ejecutaron porque Tectonic está instalado; sin él se saltan 8.</p>
+</div>
+
+<h2>Inventario</h2>
+<p>Pruebas recolectadas por archivo (los casos parametrizados cuentan por separado):</p>
+<div class="table-wrap"><table>
+  <tr><th>Archivo</th><th>Pruebas</th><th>Qué cubre</th></tr>
+  <tr><td><code>test/unit/test_escaping.py</code></td><td>60</td><td>Los 10 caracteres especiales, inyección de comandos, y cada escaper: formato y rechazo de números, fechas ISO y formatos, textos booleanos, enums y la factory.</td></tr>
+  <tr><td><code>test/unit/test_parser.py</code></td><td>18</td><td>Tipos, espacios, orden, enum y su degradación, formato de date, deduplicación, conflictos y campos opcionales.</td></tr>
+  <tr><td><code>test/unit/test_renderer.py</code></td><td>12</td><td>Sustitución, repetidos, tipos, obligatorios, espacios como vacío, opcionales y un contrato completo.</td></tr>
+  <tr><td><code>test/unit/test_service.py</code></td><td>20</td><td>Orquestación con compiladores falsos: camino feliz, validaciones, conversión a <code>CompileError</code>, propagación de <code>CompilerNotFoundError</code>, que no se mutan las entradas y que el compilador por defecto es Tectonic.</td></tr>
+  <tr><td><code>test/unit/test_compiler.py</code></td><td>5</td><td><code>TectonicCompiler</code> con <code>subprocess.run</code> falso: éxito, error de LaTeX, timeout y ejecutable ausente.</td></tr>
+  <tr><td><code>test/integration/test_parser_renderer.py</code></td><td>10</td><td>Parser y renderer reales juntos, sin compilar.</td></tr>
+  <tr><td><code>test/integration/test_integration.py</code></td><td>10</td><td>Copia idéntica del anterior (ver abajo).</td></tr>
+  <tr><td><code>test/integration/test_service_pipeline.py</code></td><td>6</td><td>Pipeline completo con Tectonic real: todos los tipos, caracteres especiales, opcionales, un paquete descargado bajo demanda, y un documento roto que da <code>CompileError</code>. Se salta sin Tectonic.</td></tr>
+  <tr><td><code>test/integration/test_compiler_tectonic.py</code></td><td>2</td><td>El compilador real: un documento mínimo produce PDF y uno roto da <code>ok=False</code>. Se salta sin Tectonic.</td></tr>
+  <tr><th>Total</th><th>143</th><th></th></tr>
+</table></div>
+
+<h2>Estrategias</h2>
+<div class="grid">
+  <div class="card">
+    <h4>Subproceso falso</h4>
+    <p>Las unitarias del compilador reemplazan <code>subprocess.run</code> con <code>monkeypatch</code> por funciones que imitan cada salida: escriben un PDF falso, devuelven un código de error, lanzan <code>TimeoutExpired</code> o <code>FileNotFoundError</code>.</p>
+  </div>
+  <div class="card">
+    <h4>Compilador inyectado</h4>
+    <p>Las del service le pasan compiladores de prueba que heredan de <code>Compiler</code>: uno que guarda el LaTeX recibido y devuelve un resultado fijo, y otro que lanza una excepción. Parser y renderer corren de verdad.</p>
+  </div>
+  <div class="card">
+    <h4>Salto condicional</h4>
+    <p>Las de integración con Tectonic llevan <code>pytestmark = pytest.mark.skipif(shutil.which("tectonic") is None, …)</code>: si el ejecutable no está en el PATH, se saltan en vez de fallar.</p>
+  </div>
+</div>
+<p>Convención del proyecto: un módulo de prueba por módulo del core, con las pruebas agrupadas en clases por comportamiento (<code>TestBasicParsing</code>, <code>TestOptionalFields</code>…).</p>
+
+<h2>Observaciones</h2>
+<div class="callout warn">
+  <div class="callout-title">Archivo duplicado</div>
+  <p><code>test_integration.py</code> y <code>test_parser_renderer.py</code> tienen exactamente el mismo contenido. El commit <code>77180dc</code> ("filename changed…") añadió el nombre nuevo sin borrar el viejo, así que esas 10 pruebas corren dos veces.</p>
+</div>
+<div class="callout warn">
+  <div class="callout-title"><code>testpaths</code> apunta a una carpeta que no existe</div>
+  <p>La carpeta es <code>test/</code> y la configuración dice <code>tests</code>. Ver <a href="project.html#discrepancias">Discrepancias</a>.</p>
+</div>
+<div class="callout">
+  <div class="callout-title">Sin cobertura</div>
+  <p>Ninguna prueba toca los límites del paso por <code>float</code> en <code>number</code> ni la dependencia del locale en <code>date</code> (ver <a href="markers.html#tipos-y-escape">Marcadores y tipos</a>). No hay medición de cobertura configurada.</p>
+</div>
+
+<h2 data-toc-label="Pruebas de la capa web">Pruebas de la capa web <span class="badge dev">rama</span></h2>
+<p>La rama <code>feature/backend/web</code> añade <code>test/unit/test_web_parse.py</code> con 7 pruebas de <code>POST /parse</code> usando <code>TestClient</code> de FastAPI. Corrida en una copia temporal de la rama (sin tocar el repositorio): <strong>150 pasan</strong> (143 + 7), con un aviso de deprecación: Starlette pide <code>httpx2</code> en lugar de <code>httpx</code> para su <code>TestClient</code>.</p>
+
+</main>
+<nav class="toc" id="toc" aria-label="En esta página"></nav>
+</div>
+<script src="guide.js"></script>
+</body>
+</html>

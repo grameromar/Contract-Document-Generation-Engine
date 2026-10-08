@@ -70,7 +70,7 @@ pytest</code></pre>
 </div>
 
 <h2 data-toc-label="Pruebas de la capa web">Pruebas de la capa web <span class="badge dev">rama</span></h2>
-<p>La rama <code>feature/backend/web</code> añade <code>test/unit/test_web_parse.py</code> con 7 pruebas de <code>POST /parse</code> usando <code>TestClient</code> de FastAPI. En esa rama pasan <strong>150</strong>: las 143 del core (todavía con el archivo duplicado, que se borró después en <code>main</code>) más esas 7. El <code>TestClient</code> de Starlette avisa que prefiere <code>httpx2</code> a <code>httpx</code>; la rama filtra solo ese aviso con <code>filterwarnings</code> en <code>pyproject.toml</code>.</p>
+<p>Las ramas web añaden 26 pruebas, todas con <code>TestClient</code> de FastAPI: <code>test_web_parse.py</code> (7), <code>test_web_generate.py</code> (11, con un compilador falso inyectado por <code>app.dependency_overrides</code>), <code>test_web_config.py</code> (6) y <code>test_web_generate_tectonic.py</code> (2, con Tectonic real). En <code>feature/backend/web-generate-endpoint</code> pasan <strong>159</strong>: las 133 del core más esas 26. El <code>TestClient</code> de Starlette avisa que prefiere <code>httpx2</code> a <code>httpx</code>; la rama filtra solo ese aviso con <code>filterwarnings</code> en <code>pyproject.toml</code>.</p>
 
 </main>
 <nav class="toc" id="toc" aria-label="En esta página"></nav>

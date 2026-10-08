@@ -14,12 +14,12 @@
 
 <p class="eyebrow">En desarrollo</p>
 <h1>Capa web</h1>
-<p class="lead">Adaptador FastAPI que expone el core por HTTP. Hoy tiene un endpoint, <code>POST /parse</code>, y el comienzo de <code>POST /generate</code>.</p>
+<p class="lead">Adaptador FastAPI que expone el core por HTTP. Tiene dos endpoints: <code>POST /parse</code> devuelve los campos de una plantilla y <code>POST /generate</code> devuelve el PDF.</p>
 
 <div class="dev-banner">
   <span class="badge dev">rama</span>
   <div>
-    <strong>Nada de esta página está en <code>main</code>.</strong> El código vive en la rama <code>feature/backend/web</code> (commit <code>c593a65</code>), subida al remoto pero sin fusionar. La rama <code>feature/backend/web-generate-endpoint</code> parte de ella y añade el inicio de <code>/generate</code> (commit <code>8df8759</code>, que antes era un stash).
+    <strong>Nada de esta página está en <code>main</code>.</strong> La rama <code>feature/backend/web</code> tiene <code>POST /parse</code>. La rama <code>feature/backend/web-generate-endpoint</code> parte de ella y añade <code>POST /generate</code> y la configuración de Tectonic. Ninguna está fusionada en <code>main</code>; esta página describe la segunda.
   </div>
 </div>
 
@@ -28,7 +28,7 @@
 git show feature/backend/web:backend/src/latexgen/web/routes.py
 
 <span class="c"># o cambiar a la rama (con el árbol de trabajo limpio)</span>
-git switch feature/backend/web
+git switch feature/backend/web-generate-endpoint
 
 <span class="c"># ver lo que añade la rama de /generate</span>
 git diff feature/backend/web feature/backend/web-generate-endpoint</code></pre>
@@ -37,20 +37,23 @@ git diff feature/backend/web feature/backend/web-generate-endpoint</code></pre>
 <div class="table-wrap"><table>
   <tr><th>Archivo</th><th>Responsabilidad</th></tr>
   <tr><td><code>src/latexgen/web/main.py</code></td><td><code>create_app()</code>: crea la app FastAPI, configura CORS con los orígenes del YAML, registra los manejadores de errores y monta el router. Al final del módulo, <code>app = create_app()</code>.</td></tr>
-  <tr><td><code>src/latexgen/web/routes.py</code></td><td><code>POST /parse</code>. Sin <code>try/except</code>: los errores los atrapan los manejadores.</td></tr>
-  <tr><td><code>src/latexgen/web/schemas.py</code></td><td>Modelos Pydantic: <code>FieldSchema</code> (con <code>from_attributes=True</code> para construirse desde el dataclass), <code>ParseRequest</code>, <code>ParseResponse</code>.</td></tr>
+  <tr><td><code>src/latexgen/web/routes.py</code></td><td><code>POST /parse</code> y <code>POST /generate</code>. Sin <code>try/except</code>: los errores los atrapan los manejadores.</td></tr>
+  <tr><td><code>src/latexgen/web/schemas.py</code></td><td>Modelos Pydantic: <code>FieldSchema</code> (con <code>from_attributes=True</code> para construirse desde el dataclass), <code>ParseRequest</code>, <code>ParseResponse</code> y <code>GenerateRequest</code>.</td></tr>
   <tr><td><code>src/latexgen/web/dependencies.py</code></td><td><code>get_service()</code> con <code>@lru_cache</code>: un único <code>TemplateService</code> compartido, con su <code>TectonicCompiler</code> construido desde la configuración. Sustituible en pruebas con <code>app.dependency_overrides</code>.</td></tr>
   <tr><td><code>src/latexgen/web/errors.py</code></td><td><code>register_exception_handlers(app)</code>: traduce cada excepción del core a una respuesta JSON.</td></tr>
   <tr><td><code>src/latexgen/web/config.py</code></td><td><code>load_settings()</code>: lee el YAML con PyYAML y lo valida con el modelo Pydantic <code>Settings</code>.</td></tr>
   <tr><td><code>config/settings.yaml</code></td><td>Configuración: <code>cors_origins</code>, <code>tectonic_path</code> y <code>compile_timeout</code>.</td></tr>
   <tr><td><code>test/unit/test_web_parse.py</code></td><td>7 pruebas de <code>/parse</code> con <code>TestClient</code>.</td></tr>
+  <tr><td><code>test/unit/test_web_generate.py</code></td><td>11 pruebas de <code>/generate</code> con un compilador falso.</td></tr>
+  <tr><td><code>test/unit/test_web_config.py</code></td><td>6 pruebas de la configuración y de <code>get_service()</code>.</td></tr>
+  <tr><td><code>test/integration/test_web_generate_tectonic.py</code></td><td>2 pruebas de <code>/generate</code> con Tectonic real; se saltan sin él.</td></tr>
   <tr><td><code>pyproject.toml</code></td><td>Añade <code>fastapi&gt;=0.110</code>, <code>uvicorn[standard]&gt;=0.29</code>, <code>pyyaml&gt;=6.0</code>, y <code>httpx&gt;=0.27</code> en <code>dev</code>. Filtra el aviso de Starlette sobre <code>httpx</code> en las pruebas.</td></tr>
 </table></div>
 <p>La capa web solo traduce: no tiene lógica de negocio, y Pydantic queda fuera del core.</p>
 
 <h2>Flujo de una petición</h2>
 <figure class="diagram">
-<svg viewBox="0 0 780 230" role="img" aria-label="Flujo de una petición a POST /parse">
+<svg viewBox="0 0 780 230" role="img" aria-label="Flujo de una petición a POST /parse; /generate sigue el mismo camino">
   <defs>
     <marker id="w1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head-dev"/></marker>
     <marker id="w2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head-err"/></marker>
@@ -81,7 +84,7 @@ git diff feature/backend/web feature/backend/web-generate-endpoint</code></pre>
   <path d="M530 166 H65 V94" class="line-err" marker-end="url(#w2)"/>
   <text x="300" y="158" text-anchor="middle" class="t-err">422 {"detail": "Unsupported type …"}</text>
 </svg>
-<figcaption>Camino feliz arriba; errores del dominio abajo. La validación del cuerpo la hace FastAPI antes de llegar a la ruta.</figcaption>
+<figcaption>Camino feliz arriba; errores del dominio abajo. La validación del cuerpo la hace FastAPI antes de llegar a la ruta. <code>POST /generate</code> sigue el mismo camino, llamando a <code>.generate()</code> y respondiendo con el PDF.</figcaption>
 </figure>
 
 <h2><code>POST /parse</code></h2>
@@ -135,7 +138,7 @@ git diff feature/backend/web feature/backend/web-generate-endpoint</code></pre>
   <tr><td><code>CompileError</code></td><td>422</td><td><code>{"detail": "LaTeX compilation failed.", "errors": exc.errors}</code></td></tr>
   <tr><td><code>CompilerNotFoundError</code></td><td>503</td><td><code>{"detail": str(exc)}</code></td></tr>
 </table></div>
-<p>Solo <code>ParseError</code> puede ocurrir hoy, porque <code>/parse</code> es el único endpoint. Los demás manejadores ya están registrados para <code>/generate</code>. El <code>log</code> de <code>CompileError</code> no se envía al cliente.</p>
+<p><code>/parse</code> solo puede producir <code>ParseError</code>; <code>/generate</code> puede producir cualquiera. Un timeout de compilación también es <code>CompileError</code>. El <code>log</code> de <code>CompileError</code> no se envía al cliente.</p>
 
 <h2>Configuración</h2>
 <pre><code><span class="c"># backend/config/settings.yaml (en la rama)</span>
@@ -164,17 +167,30 @@ compile_timeout: 30.0</code></pre>
 <pre><code>uvicorn latexgen.web.main:app --reload</code></pre>
 <p>Probado con <code>uvicorn latexgen.web.main:app --port 8765</code>: arranca y responde. FastAPI sirve la documentación automática de la API en <code>/docs</code>.</p>
 
-<h2><code>POST /generate</code>: lo que hay</h2>
-<p>La rama <code>feature/backend/web-generate-endpoint</code> solo añade a <code>schemas.py</code> este modelo. No hay ruta: hoy <code>POST /generate</code> responde 404.</p>
-<pre><code><span class="k">class</span> <span class="f">GenerateRequest</span>(BaseModel):
-    template: str = Field(..., description=<span class="s">"Raw .tex template text."</span>)
-    values: dict[str, str | int | float | bool | None] = Field(
-        default_factory=dict,
-        description=<span class="s">"Field name -&gt; value supplied by the user."</span>,
-    )</code></pre>
+<h2><code>POST /generate</code></h2>
+<p>Corre el pipeline completo (analiza, renderiza y compila) y devuelve el PDF como descarga. La plantilla viaja como texto en el JSON; el frontend la leerá del <code>.tex</code> con <code>FileReader</code>.</p>
+<pre><code>POST /generate
+{"template": "...Hola {{nombre}}, renta \\${{renta:number}}...",
+ "values": {"nombre": "Ana &amp; Co", "renta": "12500.50"}}
+
+200 OK
+content-type: application/pdf
+content-disposition: attachment; filename="document.pdf"
+&lt;bytes del PDF&gt;</code></pre>
+<p>Respuesta real del servidor con uvicorn; el PDF dice "Hola Ana &amp; Co, renta $12,500.5.". Sin el valor de <code>renta</code>, la misma petición da <code>422</code> con <code>{"detail": "Missing required fields: renta", "missing_fields": ["renta"]}</code>.</p>
+<div class="table-wrap"><table>
+  <tr><th>Campo</th><th>Tipo</th><th>Significado</th></tr>
+  <tr><td><code>template</code></td><td><code>str</code>, obligatorio</td><td>Texto de la plantilla <code>.tex</code>.</td></tr>
+  <tr><td><code>values</code></td><td><code>dict[str, str | int | float | bool | None]</code>, <code>{}</code> por defecto</td><td>Valor de cada campo por nombre. Las claves sin campo se ignoran; una lista u objeto como valor da 422.</td></tr>
+</table></div>
+<ul>
+  <li><strong>Nombre del archivo</strong>: fijo, <code>document.pdf</code>; el frontend puede renombrar la descarga.</li>
+  <li><strong>Números</strong>: un número JSON llega como <code>int</code> o <code>float</code> antes de que el core lo vea, y un <code>float</code> pierde los ceros a la derecha y la precisión que no quepa en él. Para conservar exactamente lo que escribió el usuario, el frontend debe mandar los números como texto (<code>"1234.5000"</code>).</li>
+  <li><strong>Concurrencia</strong>: la ruta es <code>def</code>, no <code>async def</code>. Compilar bloquea hasta <code>compile_timeout</code> segundos, y FastAPI ejecuta las funciones <code>def</code> en un hilo aparte, así que una compilación lenta no detiene las demás peticiones.</li>
+</ul>
 <div class="callout dev">
-  <div class="callout-title">Plan del desarrollador (no implementado)</div>
-  <p>Según sus notas: <code>POST /generate</code> correrá el pipeline completo y devolverá el PDF binario con <code>media_type="application/pdf"</code> y <code>Content-Disposition: attachment</code>, con pruebas en <code>test_web_generate.py</code>. El frontend leerá el <code>.tex</code> con <code>FileReader</code> y mandará su contenido como texto.</p>
+  <div class="callout-title">Decidido, sin implementar: idioma de las fechas</div>
+  <p>La petición tendrá un campo opcional para el idioma de los meses y días de <code>date</code>, con español por defecto. Requiere primero el cambio en el core.</p>
 </div>
 
 </main>

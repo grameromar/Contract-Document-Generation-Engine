@@ -77,8 +77,8 @@ pytest</code></pre>
   <tr><td><code>change/core-test</code></td><td><code>77180dc</code> 2026-06-21</td><td>sí</td><td>no</td></tr>
   <tr><td><code>feature/core-compiler</code></td><td><code>29afbb9</code> 2026-06-21</td><td>sí</td><td>no</td></tr>
   <tr><td><code>feature/core-service</code></td><td><code>a509a5d</code> 2026-06-21</td><td>sí</td><td>no</td></tr>
-  <tr><td><code>feature/backend/web</code></td><td><code>c593a65</code> 2026-10-07</td><td><span class="badge dev">no</span></td><td>sí</td></tr>
-  <tr><td><code>feature/backend/web-generate-endpoint</code></td><td><code>8df8759</code> 2026-10-07</td><td><span class="badge dev">no</span></td><td>sí</td></tr>
+  <tr><td><code>feature/backend/web</code></td><td>2026-10-07</td><td><span class="badge dev">no</span></td><td>sí</td></tr>
+  <tr><td><code>feature/backend/web-generate-endpoint</code></td><td>2026-10-07</td><td><span class="badge dev">no</span></td><td>sí</td></tr>
   <tr><td><code>docs/technical-guide</code></td><td>2026-10-07</td><td>sí</td><td>sí</td></tr>
   <tr><td><code>change/core-test-config</code></td><td>2026-10-07</td><td>sí</td><td>sí</td></tr>
 </table></div>
@@ -106,7 +106,7 @@ pytest</code></pre>
 </ul>
 <h3>Por hacer</h3>
 <ul>
-  <li><strong><code>POST /generate</code></strong>: ruta, respuesta PDF y pruebas (solo existe <code>GenerateRequest</code>, en <code>feature/backend/web-generate-endpoint</code>).</li>
+  <li><strong>Capa web</strong>: añadir a <code>/generate</code> el campo de idioma de las fechas y fusionar las ramas web en <code>main</code>.</li>
   <li><strong>Frontend</strong>: React con TypeScript (Vite). Cargar el <code>.tex</code>, llamar a <code>/parse</code>, formulario con un control por tipo (texto, número, selector de fecha, casilla, lista), enviar a <code>/generate</code>, descargar el PDF y mostrar los errores.</li>
   <li><strong>Pulido del backend</strong>: Dockerfile (Tectonic más <code>fontconfig</code> en Debian slim).</li>
   <li><strong>Opcionales</strong>: subir la plantilla como archivo multipart, y endurecer el aislamiento de la compilación para producción.</li>

@@ -5,7 +5,7 @@ Genera PDFs a partir de plantillas LaTeX (`.tex`) con campos dinámicos tipados,
 ## Estado actual
 
 * `main`: el core está completo y probado (`backend/src/latexgen/core/`: parser, escaping, renderer, compiler, service). 133 pruebas pasan.
-* Rama `feature/backend/web` (subida, sin fusionar): capa FastAPI con `POST /parse`. `POST /generate` solo tiene su esquema `GenerateRequest`, en la rama `feature/backend/web-generate-endpoint`.
+* Ramas web, sin fusionar: `feature/backend/web` tiene `POST /parse`; `feature/backend/web-generate-endpoint` añade `POST /generate` (devuelve el PDF) y lee la ruta y el timeout de Tectonic de `settings.yaml`. 159 pruebas pasan en esa rama.
 * Frontend (React + TypeScript con Vite): sin empezar.
 * Decidido, sin implementar: `number` conservará el decimal tal como lo escribe el usuario (se pueden quitar los ceros a la derecha), sin pasar por `float`; los meses y días de `date` saldrán en un idioma elegible, español por defecto.
 * Pendientes y discrepancias conocidas: `docs/guide/project.html`.

@@ -35,3 +35,18 @@ class ParseResponse(BaseModel):
     """Response body for ``POST /parse``: the discovered fields."""
 
     fields: list[FieldSchema]
+    
+
+class GenerateRequest(BaseModel):
+    """Request body for ``POST /generate``.
+
+    ``values`` maps each field name to the raw value the user entered. The
+    allowed value types mirror what JSON can carry for a form input (text,
+    numbers, booleans); the core stringifies them when escaping.
+    """
+
+    template: str = Field(..., description="Raw .tex template text.")
+    values: dict[str, str | int | float | bool | None] = Field(
+        default_factory=dict,
+        description="Field name -> value supplied by the user.",
+    )

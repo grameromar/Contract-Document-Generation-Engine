@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Referencia del core · latexgen</title>
+<link rel="stylesheet" href="guide.css">
+<script>try{var t=localStorage.getItem("latexgen-guide-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="content" id="content">
+
+<p class="eyebrow">Core</p>
+<h1>Referencia del core</h1>
+<p class="lead">Cada símbolo de <code>latexgen.core</code>: firma, parámetros, retorno y errores. Los nombres que empiezan por <code>_</code> son internos; se listan porque explican el comportamiento.</p>
+
+<div class="callout">
+  <p>Todos los módulos empiezan con <code>from __future__ import annotations</code>. Ruta base de las fuentes: <code>backend/src/latexgen/core/</code>.</p>
+</div>
+
+<!-- ===================== service ===================== -->
+<h2><code>service.py</code></h2>
+<div class="api">
+  <div class="api-head"><h3>class TemplateService</h3><a class="src" href="../../backend/src/latexgen/core/service.py">service.py:19</a></div>
+  <p>Punto de entrada del core: analiza, renderiza y compila plantillas.</p>
+  <div class="sig">TemplateService(compiler: Compiler | None = None)</div>
+  <dl class="params">
+    <dt>compiler</dt><dd>Compilador a usar. Con <code>None</code> crea un <code>TectonicCompiler()</code> con sus valores por defecto.</dd>
+  </dl>
+  <p>Atributos: <code>renderer</code> (un <code>Renderer</code>) y <code>compiler</code>.</p>
+
+  <h4>parse</h4>
+  <div class="sig">parse(self, template: str) -&gt; list[TemplateField]</div>
+  <p>Devuelve los campos de la plantilla en orden de aparición. Delega en <code>parse_template</code>. Lanza <code>ParseError</code>.</p>
+
+  <h4>generate</h4>
+  <div class="sig">generate(self, template: str, values: dict[str, object]) -&gt; bytes</div>
+  <dl class="params">
+    <dt>template</dt><dd>Texto de la plantilla <code>.tex</code>.</dd>
+    <dt>values</dt><dd>Nombre del campo a valor crudo del usuario. Las claves sin campo se ignoran.</dd>
+  </dl>
+  <p>Analiza de nuevo la plantilla, la renderiza y la compila; devuelve los bytes del PDF. Lanza <code>ParseError</code>, <code>MissingFieldsError</code>, <code>InvalidFieldValueError</code>, <code>CompileError</code> (si el resultado de compilar trae <code>ok=False</code>) o <code>CompilerNotFoundError</code>.</p>
+</div>
+
+<!-- ===================== parser ===================== -->
+<h2><code>parser.py</code></h2>
+<div class="api">
+  <div class="api-head"><h3>parse_template</h3><a class="src" href="../../backend/src/latexgen/core/parser.py">parser.py:20</a></div>
+  <div class="sig">parse_template(content: str) -&gt; list[TemplateField]</div>
+  <p>Encuentra los marcadores con <code>MARKER_PATTERN.finditer</code> y devuelve un <code>TemplateField</code> por nombre distinto, en orden de primera aparición. Lanza <code>ParseError</code> si un tipo no es válido o si un nombre se declara de dos formas distintas. Reglas completas en <a href="markers.html#reglas-del-parser">Marcadores y tipos</a>.</p>
+</div>
+<div class="api">
+  <div class="api-head"><h3>VALID_TYPES</h3><a class="src" href="../../backend/src/latexgen/core/parser.py">parser.py:17</a></div>
+  <div class="sig">VALID_TYPES = frozenset({"string", "number", "date", "boolean", "enum"})</div>
+</div>
+<div class="api">
+  <div class="api-head"><h3>_build_field <span class="badge muted">interno</span></h3><a class="src" href="../../backend/src/latexgen/core/parser.py">parser.py:63</a></div>
+  <div class="sig">_build_field(name: str, declared_type: str, raw_argument: str | None, required: bool) -&gt; TemplateField</div>
+  <p>Construye el campo: <code>enum</code> sin opciones pasa a <code>string</code>; <code>date</code> guarda el argumento recortado como <code>date_format</code> (o <code>None</code> si queda vacío); el resto ignora el argumento.</p>
+</div>
+<div class="api">
+  <div class="api-head"><h3>_split_options <span class="badge muted">interno</span></h3><a class="src" href="../../backend/src/latexgen/core/parser.py">parser.py:103</a></div>
+  <div class="sig">_split_options(raw_argument: str | None) -&gt; list[str]</div>
+  <p>Divide por comas, recorta cada opción y descarta las vacías. <code>None</code> o vacío da <code>[]</code>.</p>
+</div>
+
+<!-- ===================== renderer ===================== -->
+<h2><code>renderer.py</code></h2>
+<div class="api">
+  <div class="api-head"><h3>class Renderer</h3><a class="src" href="../../backend/src/latexgen/core/renderer.py">renderer.py:21</a></div>
+  <p>Sin estado ni constructor propio.</p>
+  <h4>render</h4>
+  <div class="sig">render(self, template: str, fields: list[TemplateField], values: dict[str, object]) -&gt; str</div>
+  <dl class="params">
+    <dt>template</dt><dd>Plantilla con marcadores.</dd>
+    <dt>fields</dt><dd>Campos ya descubiertos por el parser. El renderer no analiza.</dd>
+    <dt>values</dt><dd>Valores crudos por nombre de campo.</dd>
+  </dl>
+  <p>Devuelve la plantilla con cada marcador sustituido. Lanza <code>MissingFieldsError</code> (con todos los obligatorios vacíos) antes de escapar nada, e <code>InvalidFieldValueError</code> en el primer valor que su escaper rechace. Un marcador cuyo nombre no está en <code>fields</code> se deja igual.</p>
+  <h4>_escape_fields <span class="badge muted">interno</span></h4>
+  <div class="sig">_escape_fields(self, fields, values) -&gt; dict[str, str]</div>
+  <p>Mapa nombre a texto escapado. Valores vacíos dan <code>""</code>; el resto pasa por <code>get_escaper(field.type, options=field.options, date_format=field.date_format or DEFAULT_DATE_FORMAT)</code>. Envuelve el <code>ValueError</code> del escaper en <code>InvalidFieldValueError</code>.</p>
+  <h4>_is_empty <span class="badge muted">interno</span></h4>
+  <div class="sig">@staticmethod _is_empty(value: object) -&gt; bool</div>
+  <p><code>True</code> para <code>None</code> y para cadenas vacías o de solo espacios. <code>0</code>, <code>False</code> y listas vacías no cuentan como vacíos.</p>
+</div>
+
+<!-- ===================== escaping ===================== -->
+<h2><code>escaping.py</code></h2>
+<div class="api">
+  <div class="api-head"><h3>get_escaper</h3><a class="src" href="../../backend/src/latexgen/core/escaping.py">escaping.py:263</a></div>
+  <div class="sig">get_escaper(field_type: str, *, options: list[str] | None = None, date_format: str = DEFAULT_DATE_FORMAT) -&gt; Escaper</div>
+  <dl class="params">
+    <dt>field_type</dt><dd><code>string</code>, <code>number</code>, <code>date</code>, <code>boolean</code> o <code>enum</code>.</dd>
+    <dt>options</dt><dd>Solo para <code>enum</code>. Vacío o <code>None</code> hace que el enum se comporte como <code>string</code>.</dd>
+    <dt>date_format</dt><dd>Solo para <code>date</code>. Patrón strftime.</dd>
+  </dl>
+  <p>Devuelve un <code>Escaper</code>. Lanza <code>ValueError</code> si el tipo no tiene escaper. Los argumentos de configuración son solo por nombre.</p>
+</div>
+<div class="api">
+  <div class="api-head"><h3>escape_latex</h3><a class="src" href="../../backend/src/latexgen/core/escaping.py">escaping.py:73</a></div>
+  <div class="sig">escape_latex(text: str) -&gt; str</div>
+  <p>Reemplaza los 10 caracteres especiales de LaTeX en una sola pasada (<code>str.translate</code> con <code>_LATEX_TRANSLATION_TABLE</code>). Tabla completa en <a href="markers.html#tipos-y-escape">Marcadores y tipos</a>.</p>
+</div>
+<div class="api">
+  <div class="api-head"><h3>Constantes y alias</h3><a class="src" href="../../backend/src/latexgen/core/escaping.py">escaping.py:32</a></div>
+  <div class="table-wrap"><table>
+    <tr><th>Nombre</th><th>Valor</th><th>Línea</th></tr>
+    <tr><td><code>Escaper</code></td><td><code>Callable[[object], str]</code></td><td>70</td></tr>
+    <tr><td><code>DEFAULT_DATE_FORMAT</code></td><td><code>"%Y-%m-%d"</code></td><td>52</td></tr>
+    <tr><td><code>_LATEX_SPECIAL_CHARACTERS</code></td><td>Carácter especial a su reemplazo (10 entradas).</td><td>32</td></tr>
+    <tr><td><code>_LATEX_TRANSLATION_TABLE</code></td><td><code>str.maketrans(_LATEX_SPECIAL_CHARACTERS)</code></td><td>49</td></tr>
+    <tr><td><code>_TRUTHY_STRINGS</code> / <code>_FALSY_STRINGS</code></td><td>Textos aceptados como verdadero y falso.</td><td>57 / 60</td></tr>
+    <tr><td><code>_NUMBER_PATTERN</code></td><td><code>^-?\d+(\.\d+)?$</code></td><td>67</td></tr>
+    <tr><td><code>_SIMPLE_ESCAPERS</code></td><td><code>string</code>, <code>number</code> y <code>boolean</code> a su función.</td><td>256</td></tr>
+  </table></div>
+</div>
+<div class="api">
+  <div class="api-head"><h3>Escapers por tipo <span class="badge muted">internos</span></h3><a class="src" href="../../backend/src/latexgen/core/escaping.py">escaping.py:91</a></div>
+  <div class="table-wrap"><table>
+    <tr><th>Función</th><th>Línea</th><th>Resumen</th></tr>
+    <tr><td><code>_escape_string(value)</code></td><td>91</td><td><code>None</code> da <code>""</code>; si no, <code>escape_latex(str(value))</code>.</td></tr>
+    <tr><td><code>_escape_number(value)</code></td><td>111</td><td>Valida y agrupa miles. Ver <a href="markers.html#tipos-y-escape">reglas</a>.</td></tr>
+    <tr><td><code>_make_date_escaper(date_format)</code></td><td>144</td><td>Devuelve un escaper que interpreta ISO y aplica <code>strftime</code>.</td></tr>
+    <tr><td><code>_escape_boolean(value)</code></td><td>190</td><td><code>Sí</code> o <code>No</code>; otro valor es <code>ValueError</code>.</td></tr>
+    <tr><td><code>_make_enum_escaper(options)</code></td><td>218</td><td>Devuelve un escaper que exige una opción exacta y la escapa.</td></tr>
+  </table></div>
+</div>
+
+<!-- ===================== compiler ===================== -->
+<h2><code>compiler.py</code></h2>
+<div class="api">
+  <div class="api-head"><h3>class Compiler (ABC)</h3><a class="src" href="../../backend/src/latexgen/core/compiler.py">compiler.py:29</a></div>
+  <div class="sig">@abstractmethod compile(self, tex_source: str) -&gt; CompileResult</div>
+  <p>Interfaz de cualquier motor que convierta un documento LaTeX completo en PDF. Debe devolver un <code>CompileResult</code>.</p>
+</div>
+<div class="api">
+  <div class="api-head"><h3>class TectonicCompiler(Compiler)</h3><a class="src" href="../../backend/src/latexgen/core/compiler.py">compiler.py:46</a></div>
+  <div class="sig">TectonicCompiler(tectonic_path: str = "tectonic", timeout: float = 30.0)</div>
+  <dl class="params">
+    <dt>tectonic_path</dt><dd>Nombre o ruta del ejecutable. Con el valor por defecto se busca en el PATH.</dd>
+    <dt>timeout</dt><dd>Segundos máximos por compilación.</dd>
+  </dl>
+  <h4>compile</h4>
+  <div class="sig">compile(self, tex_source: str) -&gt; CompileResult</div>
+  <p>Escribe <code>document.tex</code> en un directorio temporal, ejecuta Tectonic y lee <code>document.pdf</code>. Un error de LaTeX o un timeout dan <code>ok=False</code>; si falta el ejecutable lanza <code>CompilerNotFoundError</code>. Detalle en <a href="pipeline.html#3-compile-latex-a-pdf">Flujo de ejecución</a>.</p>
+  <h4>_extract_errors <span class="badge muted">interno</span></h4>
+  <div class="sig">@staticmethod _extract_errors(output: str) -&gt; list[str]</div>
+  <p>Líneas (recortadas) que empiezan por <code>error:</code> o <code>!</code>. Nunca devuelve una lista vacía: sin coincidencias da <code>["LaTeX compilation failed."]</code>.</p>
+</div>
+
+<!-- ===================== models ===================== -->
+<h2><code>models.py</code></h2>
+<div class="api">
+  <div class="api-head"><h3>@dataclass TemplateField</h3><a class="src" href="../../backend/src/latexgen/core/models.py">models.py:14</a></div>
+  <div class="table-wrap"><table>
+    <tr><th>Atributo</th><th>Tipo</th><th>Por defecto</th><th>Significado</th></tr>
+    <tr><td><code>name</code></td><td><code>str</code></td><td></td><td>Identificador del marcador.</td></tr>
+    <tr><td><code>type</code></td><td><code>str</code></td><td><code>"string"</code></td><td>Tipo declarado.</td></tr>
+    <tr><td><code>required</code></td><td><code>bool</code></td><td><code>True</code></td><td>Si exige valor.</td></tr>
+    <tr><td><code>options</code></td><td><code>list[str]</code></td><td><code>[]</code></td><td>Opciones de un enum.</td></tr>
+    <tr><td><code>date_format</code></td><td><code>str | None</code></td><td><code>None</code></td><td>Patrón strftime de un date; <code>None</code> usa ISO.</td></tr>
+  </table></div>
+  <p>La igualdad entre campos (generada por <code>@dataclass</code>) compara todos los atributos; el parser la usa para detectar declaraciones inconsistentes.</p>
+</div>
+<div class="api">
+  <div class="api-head"><h3>@dataclass CompileResult</h3><a class="src" href="../../backend/src/latexgen/core/models.py">models.py:35</a></div>
+  <div class="table-wrap"><table>
+    <tr><th>Atributo</th><th>Tipo</th><th>Por defecto</th><th>Significado</th></tr>
+    <tr><td><code>ok</code></td><td><code>bool</code></td><td></td><td>Si se produjo el PDF.</td></tr>
+    <tr><td><code>pdf</code></td><td><code>bytes | None</code></td><td><code>None</code></td><td>Bytes del PDF cuando <code>ok</code>.</td></tr>
+    <tr><td><code>log</code></td><td><code>str</code></td><td><code>""</code></td><td>Salida cruda del compilador (stderr en Tectonic).</td></tr>
+    <tr><td><code>errors</code></td><td><code>list[str]</code></td><td><code>[]</code></td><td>Líneas de error legibles cuando falla.</td></tr>
+  </table></div>
+</div>
+
+<!-- ===================== markers / exceptions ===================== -->
+<h2><code>markers.py</code> y <code>exceptions.py</code></h2>
+<div class="api">
+  <div class="api-head"><h3>MARKER_PATTERN</h3><a class="src" href="../../backend/src/latexgen/core/markers.py">markers.py:26</a></div>
+  <p>Regex compilado de la gramática del marcador, con 4 grupos (nombre, <code>?</code>, tipo, argumento). Ver <a href="markers.html">Marcadores y tipos</a>.</p>
+</div>
+<div class="api">
+  <div class="api-head"><h3>Excepciones</h3><a class="src" href="../../backend/src/latexgen/core/exceptions.py">exceptions.py:11</a></div>
+  <p><code>LatexGenError</code>, <code>RenderError</code>, <code>MissingFieldsError</code>, <code>InvalidFieldValueError</code>, <code>ParseError</code>, <code>CompilerNotFoundError</code> y <code>CompileError</code>. Jerarquía, atributos y mensajes en <a href="errors.html">Errores</a>.</p>
+</div>
+
+</main>
+<nav class="toc" id="toc" aria-label="En esta página"></nav>
+</div>
+<script src="guide.js"></script>
+</body>
+</html>

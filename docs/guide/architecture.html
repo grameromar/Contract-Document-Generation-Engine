@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arquitectura · latexgen</title>
+<link rel="stylesheet" href="guide.css">
+<script>try{var t=localStorage.getItem("latexgen-guide-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="content" id="content">
+
+<p class="eyebrow">Visión general</p>
+<h1>Arquitectura</h1>
+<p class="lead">Arquitectura en capas: un core de dominio sin dependencias de terceros, rodeado de adaptadores que lo exponen. Hoy solo el core está en <code>main</code>.</p>
+
+<h2>Capas</h2>
+<figure class="diagram">
+<svg viewBox="0 0 760 380" role="img" aria-label="Diagrama de capas: frontend, capa web, core y Tectonic">
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head"/></marker>
+    <marker id="a1d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head-dev"/></marker>
+  </defs>
+  <rect x="40" y="16" width="480" height="50" rx="10" class="box-muted"/>
+  <text x="280" y="38" text-anchor="middle" class="t">Frontend</text>
+  <text x="280" y="56" text-anchor="middle" class="t-sm">React + TypeScript · todavía sin código</text>
+
+  <line x1="280" y1="66" x2="280" y2="96" class="line-dev" marker-end="url(#a1d)"/>
+  <text x="292" y="86" class="t-sm">HTTP + JSON</text>
+
+  <rect x="40" y="98" width="480" height="56" rx="10" class="box-dev"/>
+  <text x="280" y="121" text-anchor="middle" class="t">latexgen.web · FastAPI</text>
+  <text x="280" y="141" text-anchor="middle" class="t-sm">rama local feature/backend/web · solo POST /parse</text>
+
+  <line x1="280" y1="154" x2="280" y2="184" class="line-dev" marker-end="url(#a1d)"/>
+  <text x="292" y="174" class="t-sm">TemplateService</text>
+
+  <rect x="40" y="186" width="480" height="178" rx="12" class="box-accent"/>
+  <text x="56" y="208" class="t-acc">LATEXGEN.CORE · EN MAIN · SOLO BIBLIOTECA ESTÁNDAR</text>
+  <rect x="56" y="222" width="104" height="40" rx="7" class="box"/><text x="108" y="247" text-anchor="middle" class="t-mono">service</text>
+  <rect x="172" y="222" width="104" height="40" rx="7" class="box"/><text x="224" y="247" text-anchor="middle" class="t-mono">parser</text>
+  <rect x="288" y="222" width="104" height="40" rx="7" class="box"/><text x="340" y="247" text-anchor="middle" class="t-mono">renderer</text>
+  <rect x="404" y="222" width="104" height="40" rx="7" class="box"/><text x="456" y="247" text-anchor="middle" class="t-mono">compiler</text>
+  <rect x="56" y="274" width="104" height="40" rx="7" class="box"/><text x="108" y="299" text-anchor="middle" class="t-mono">markers</text>
+  <rect x="172" y="274" width="104" height="40" rx="7" class="box"/><text x="224" y="299" text-anchor="middle" class="t-mono">escaping</text>
+  <rect x="288" y="274" width="104" height="40" rx="7" class="box"/><text x="340" y="299" text-anchor="middle" class="t-mono">models</text>
+  <rect x="404" y="274" width="104" height="40" rx="7" class="box"/><text x="456" y="299" text-anchor="middle" class="t-mono">exceptions</text>
+  <text x="56" y="344" class="t-sm">Las capas de afuera dependen del core; el core no importa nada de ellas.</text>
+
+  <rect x="620" y="214" width="130" height="56" rx="10" class="box"/>
+  <text x="685" y="238" text-anchor="middle" class="t">Tectonic</text>
+  <text x="685" y="257" text-anchor="middle" class="t-sm">ejecutable externo</text>
+  <line x1="508" y1="242" x2="618" y2="242" class="line" marker-end="url(#a1)"/>
+  <text x="527" y="234" class="t-sm">subprocess.run</text>
+</svg>
+<figcaption>La caja violeta punteada existe solo en una rama local; la gris punteada no existe todavía.</figcaption>
+</figure>
+
+<p>La regla que sostiene el diseño: <strong>el core no depende de ningún framework</strong>. En <code>main</code>, <code>pyproject.toml</code> declara <code>dependencies = []</code> y los módulos del core solo importan de la biblioteca estándar (<code>re</code>, <code>datetime</code>, <code>typing</code>, <code>dataclasses</code>, <code>abc</code>, <code>subprocess</code>, <code>tempfile</code>, <code>pathlib</code>). Tectonic no se importa: se ejecuta como proceso aparte. Así el mismo core podría servir a una API web o a una aplicación de escritorio sin cambios; los docstrings de <code>models.py</code> y <code>service.py</code> mencionan ambas como capas de entrega previstas.</p>
+
+<h2>Dependencias entre módulos</h2>
+<figure class="diagram">
+<svg viewBox="0 0 760 320" role="img" aria-label="Grafo de imports entre los módulos del core">
+  <defs>
+    <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head-acc"/></marker>
+    <marker id="a2g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head"/></marker>
+  </defs>
+  <rect x="290" y="16" width="180" height="46" rx="9" class="box-accent"/>
+  <text x="380" y="36" text-anchor="middle" class="t-mono">service.py</text>
+  <text x="380" y="53" text-anchor="middle" class="t-sm">TemplateService</text>
+
+  <rect x="60" y="110" width="180" height="46" rx="9" class="box"/>
+  <text x="150" y="130" text-anchor="middle" class="t-mono">parser.py</text>
+  <text x="150" y="147" text-anchor="middle" class="t-sm">parse_template</text>
+  <rect x="290" y="110" width="180" height="46" rx="9" class="box"/>
+  <text x="380" y="130" text-anchor="middle" class="t-mono">renderer.py</text>
+  <text x="380" y="147" text-anchor="middle" class="t-sm">Renderer</text>
+  <rect x="520" y="110" width="180" height="46" rx="9" class="box"/>
+  <text x="610" y="130" text-anchor="middle" class="t-mono">compiler.py</text>
+  <text x="610" y="147" text-anchor="middle" class="t-sm">Compiler, TectonicCompiler</text>
+
+  <rect x="175" y="204" width="150" height="46" rx="9" class="box"/>
+  <text x="250" y="224" text-anchor="middle" class="t-mono">markers.py</text>
+  <text x="250" y="241" text-anchor="middle" class="t-sm">MARKER_PATTERN</text>
+  <rect x="375" y="204" width="150" height="46" rx="9" class="box"/>
+  <text x="450" y="224" text-anchor="middle" class="t-mono">escaping.py</text>
+  <text x="450" y="241" text-anchor="middle" class="t-sm">get_escaper</text>
+  <rect x="545" y="204" width="130" height="46" rx="9" class="box-muted"/>
+  <text x="610" y="224" text-anchor="middle" class="t">Tectonic</text>
+  <text x="610" y="241" text-anchor="middle" class="t-sm">proceso externo</text>
+
+  <path d="M380 62 L150 108" class="line-acc" marker-end="url(#a2)"/>
+  <path d="M380 62 L380 108" class="line-acc" marker-end="url(#a2)"/>
+  <path d="M380 62 L610 108" class="line-acc" marker-end="url(#a2)"/>
+  <path d="M150 156 L250 202" class="line" marker-end="url(#a2g)"/>
+  <path d="M380 156 L250 202" class="line" marker-end="url(#a2g)"/>
+  <path d="M380 156 L450 202" class="line" marker-end="url(#a2g)"/>
+  <path d="M610 156 L610 202" class="line" stroke-dasharray="5 4" marker-end="url(#a2g)"/>
+
+  <rect x="60" y="270" width="640" height="40" rx="9" class="box"/>
+  <text x="380" y="295" text-anchor="middle" class="t-sm">models.py y exceptions.py: datos y errores compartidos, importados por parser, renderer, compiler y service</text>
+</svg>
+<figcaption>Una flecha va del módulo que importa al importado. <code>escaping.py</code> no importa ningún otro módulo del paquete: lanza <code>ValueError</code> y el renderer lo traduce a un error de dominio.</figcaption>
+</figure>
+
+<p>El grafo no tiene ciclos y cada módulo tiene una sola responsabilidad:</p>
+<div class="table-wrap"><table>
+  <tr><th>Módulo</th><th>Responsabilidad</th><th>Fuente</th></tr>
+  <tr><td><code>markers.py</code></td><td>Define la gramática del marcador: un único regex compartido por parser y renderer, para que no diverjan.</td><td><a class="src" href="../../backend/src/latexgen/core/markers.py">markers.py:26</a></td></tr>
+  <tr><td><code>models.py</code></td><td>Dataclasses puras: <code>TemplateField</code> (un campo) y <code>CompileResult</code> (resultado de compilar).</td><td><a class="src" href="../../backend/src/latexgen/core/models.py">models.py:14</a></td></tr>
+  <tr><td><code>exceptions.py</code></td><td>Jerarquía de errores de dominio con raíz <code>LatexGenError</code>.</td><td><a class="src" href="../../backend/src/latexgen/core/exceptions.py">exceptions.py:11</a></td></tr>
+  <tr><td><code>parser.py</code></td><td>Etapa 1: encuentra los campos de la plantilla, sin duplicados y en orden de aparición.</td><td><a class="src" href="../../backend/src/latexgen/core/parser.py">parser.py:20</a></td></tr>
+  <tr><td><code>escaping.py</code></td><td>Valida, da formato y escapa un valor según el tipo de su campo.</td><td><a class="src" href="../../backend/src/latexgen/core/escaping.py">escaping.py:263</a></td></tr>
+  <tr><td><code>renderer.py</code></td><td>Etapa 2: comprueba obligatorios, escapa cada valor y sustituye los marcadores.</td><td><a class="src" href="../../backend/src/latexgen/core/renderer.py">renderer.py:21</a></td></tr>
+  <tr><td><code>compiler.py</code></td><td>Etapa 3: compila LaTeX a PDF en un directorio temporal, con límite de tiempo.</td><td><a class="src" href="../../backend/src/latexgen/core/compiler.py">compiler.py:29</a></td></tr>
+  <tr><td><code>service.py</code></td><td>Orquesta las tres etapas detrás de una interfaz de dos métodos.</td><td><a class="src" href="../../backend/src/latexgen/core/service.py">service.py:19</a></td></tr>
+</table></div>
+<p><code>latexgen/__init__.py</code> y <code>latexgen/core/__init__.py</code> están vacíos: no reexportan nada, así que se importa desde cada módulo (<code>from latexgen.core.service import TemplateService</code>).</p>
+
+<h2>Patrones de diseño</h2>
+<div class="grid">
+  <div class="card">
+    <h4>Factory</h4>
+    <p><code>get_escaper(field_type, *, options, date_format)</code> devuelve la función de escape adecuada para cada tipo. Las de <code>date</code> y <code>enum</code> se fabrican al vuelo con su configuración capturada en un cierre, así todas tienen la misma firma <code>(value) -&gt; str</code>.</p>
+    <p><a class="src" href="../../backend/src/latexgen/core/escaping.py">escaping.py:263</a></p>
+  </div>
+  <div class="card">
+    <h4>Strategy</h4>
+    <p><code>Compiler</code> es una clase abstracta con un método <code>compile(tex_source)</code>. <code>TectonicCompiler</code> es la única implementación; las pruebas usan otras (stubs) sin tocar el service.</p>
+    <p><a class="src" href="../../backend/src/latexgen/core/compiler.py">compiler.py:29</a></p>
+  </div>
+  <div class="card">
+    <h4>Service / Facade</h4>
+    <p><code>TemplateService</code> es el único punto de entrada que necesita una capa externa: <code>parse</code> y <code>generate</code> esconden las tres etapas.</p>
+    <p><a class="src" href="../../backend/src/latexgen/core/service.py">service.py:19</a></p>
+  </div>
+  <div class="card">
+    <h4>Inyección de dependencias</h4>
+    <p>El compilador entra por el constructor: <code>TemplateService(compiler=None)</code> usa <code>TectonicCompiler()</code> si no recibe otro.</p>
+    <p><a class="src" href="../../backend/src/latexgen/core/service.py">service.py:22</a></p>
+  </div>
+</div>
+
+<h2>Decisiones visibles en el código</h2>
+<div class="table-wrap"><table>
+  <tr><th>Decisión</th><th>Por qué (según el código y sus docstrings)</th><th>Fuente</th></tr>
+  <tr><td>Un solo regex para descubrir y para sustituir.</td><td>Un cambio de sintaxis se hace en un único lugar y parser y renderer coinciden por construcción.</td><td><a class="src" href="../../backend/src/latexgen/core/markers.py">markers.py:1</a></td></tr>
+  <tr><td>Escape de los 10 caracteres especiales en una sola pasada con <code>str.translate</code>.</td><td>Reemplazar uno tras otro dependería del orden: escapar <code>\</code> después de <code>&amp;</code> rompería el <code>\&amp;</code> recién escrito. También neutraliza comandos inyectados como <code>\input{…}</code>.</td><td><a class="src" href="../../backend/src/latexgen/core/escaping.py">escaping.py:45</a></td></tr>
+  <tr><td>Cada tipo tiene su estrategia de escape.</td><td>Un número se valida y agrupa, una fecha se interpreta y se formatea, un booleano se traduce a texto fijo y un enum se valida contra sus opciones.</td><td><a class="src" href="../../backend/src/latexgen/core/escaping.py">escaping.py:11</a></td></tr>
+  <tr><td>Booleano estricto.</td><td>Un valor que no está en la lista de verdaderos ni de falsos es error, para que una errata no se convierta en un "No" silencioso.</td><td><a class="src" href="../../backend/src/latexgen/core/escaping.py">escaping.py:54</a></td></tr>
+  <tr><td><code>generate</code> vuelve a analizar la plantilla.</td><td>La plantilla es la única fuente de verdad; no se confía en metadatos de campos que mande quien llama.</td><td><a class="src" href="../../backend/src/latexgen/core/service.py">service.py:53</a></td></tr>
+  <tr><td>Un error de LaTeX es un dato, no una excepción.</td><td>Un documento roto es un resultado esperado: <code>compile</code> devuelve <code>CompileResult(ok=False)</code>. Solo un problema de entorno (falta Tectonic) lanza excepción. El service convierte después el resultado fallido en <code>CompileError</code>.</td><td><a class="src" href="../../backend/src/latexgen/core/compiler.py">compiler.py:9</a></td></tr>
+  <tr><td>Tectonic como motor.</td><td>Trae su propia distribución TeX, descarga paquetes bajo demanda y tiene shell-escape desactivado por defecto, más seguro para plantillas no confiables.</td><td><a class="src" href="../../backend/src/latexgen/core/compiler.py">compiler.py:4</a></td></tr>
+  <tr><td>Un marcador sin campo conocido se deja intacto.</td><td>Borrarlo en silencio escondería un desajuste entre plantilla y campos.</td><td><a class="src" href="../../backend/src/latexgen/core/renderer.py">renderer.py:55</a></td></tr>
+</table></div>
+
+</main>
+<nav class="toc" id="toc" aria-label="En esta página"></nav>
+</div>
+<script src="guide.js"></script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Errores · latexgen</title>
+<link rel="stylesheet" href="guide.css">
+<script>try{var t=localStorage.getItem("latexgen-guide-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="content" id="content">
+
+<p class="eyebrow">Core</p>
+<h1>Errores</h1>
+<p class="lead">El core lanza excepciones propias, todas hijas de <code>LatexGenError</code>, para que una capa externa pueda traducirlas a mensajes para el usuario sin conocer los detalles internos.</p>
+
+<h2>Jerarquía</h2>
+<figure class="diagram">
+<svg viewBox="0 0 760 290" role="img" aria-label="Árbol de excepciones del core">
+  <defs>
+    <marker id="e1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head-err"/></marker>
+  </defs>
+  <rect x="290" y="16" width="180" height="46" rx="9" class="box-accent"/>
+  <text x="380" y="36" text-anchor="middle" class="t-mono">LatexGenError</text>
+  <text x="380" y="53" text-anchor="middle" class="t-sm">hereda de Exception</text>
+
+  <path d="M380 62 V86 H95 V108 M380 86 H285 V108 M380 86 H475 V108 M380 86 H655 V108" class="line"/>
+
+  <rect x="20" y="108" width="150" height="46" rx="9" class="box"/>
+  <text x="95" y="128" text-anchor="middle" class="t-mono">ParseError</text>
+  <text x="95" y="145" text-anchor="middle" class="t-sm">parser</text>
+  <rect x="210" y="108" width="150" height="46" rx="9" class="box"/>
+  <text x="285" y="128" text-anchor="middle" class="t-mono">RenderError</text>
+  <text x="285" y="145" text-anchor="middle" class="t-sm">base, no se lanza sola</text>
+  <rect x="400" y="108" width="150" height="46" rx="9" class="box"/>
+  <text x="475" y="128" text-anchor="middle" class="t-mono">CompileError</text>
+  <text x="475" y="145" text-anchor="middle" class="t-sm">service</text>
+  <rect x="560" y="108" width="190" height="46" rx="9" class="box"/>
+  <text x="655" y="128" text-anchor="middle" class="t-mono">CompilerNotFoundError</text>
+  <text x="655" y="145" text-anchor="middle" class="t-sm">compiler</text>
+
+  <path d="M285 154 V178 H200 V202 M285 178 H390 V202" class="line"/>
+  <rect x="115" y="202" width="170" height="46" rx="9" class="box"/>
+  <text x="200" y="222" text-anchor="middle" class="t-mono">MissingFieldsError</text>
+  <text x="200" y="239" text-anchor="middle" class="t-sm">renderer</text>
+  <rect x="295" y="202" width="190" height="46" rx="9" class="box"/>
+  <text x="390" y="222" text-anchor="middle" class="t-mono">InvalidFieldValueError</text>
+  <text x="390" y="239" text-anchor="middle" class="t-sm">renderer</text>
+
+  <rect x="545" y="202" width="170" height="46" rx="9" class="box-err"/>
+  <text x="630" y="222" text-anchor="middle" class="t-mono">ValueError</text>
+  <text x="630" y="239" text-anchor="middle" class="t-sm">escapers, interno</text>
+  <line x1="545" y1="225" x2="488" y2="225" class="line-err" marker-end="url(#e1)"/>
+  <text x="516" y="270" text-anchor="middle" class="t-err">el renderer lo envuelve</text>
+</svg>
+<figcaption>Debajo de cada nombre, el módulo que la lanza. <code>ValueError</code> no es del dominio: nunca sale del renderer.</figcaption>
+</figure>
+
+<p>Atrapar <code>RenderError</code> cubre todo lo que falla al convertir los valores del usuario en documento; atrapar <code>LatexGenError</code> cubre cualquier error del core.</p>
+
+<h2>Detalle por excepción</h2>
+<div class="table-wrap"><table>
+  <tr><th>Excepción</th><th>Cuándo</th><th>Atributos</th><th>Mensaje (<code>str(exc)</code>)</th></tr>
+  <tr>
+    <td><code>ParseError</code><br><a class="src" href="../../backend/src/latexgen/core/exceptions.py">exceptions.py:45</a></td>
+    <td>Tipo no soportado, o un campo declarado de dos formas.</td>
+    <td>Ninguno.</td>
+    <td><code>Unsupported type 'color' for field 'x'. Valid types: boolean, date, enum, number, string.</code><br><code>Field 'x' is declared inconsistently across markers.</code></td>
+  </tr>
+  <tr>
+    <td><code>MissingFieldsError</code><br><a class="src" href="../../backend/src/latexgen/core/exceptions.py">exceptions.py:19</a></td>
+    <td>Uno o más obligatorios sin valor.</td>
+    <td><code>missing_fields: list[str]</code>, en orden de los campos.</td>
+    <td><code>Missing required fields: a, b</code></td>
+  </tr>
+  <tr>
+    <td><code>InvalidFieldValueError</code><br><a class="src" href="../../backend/src/latexgen/core/exceptions.py">exceptions.py:32</a></td>
+    <td>Un escaper rechazó un valor.</td>
+    <td><code>field_name: str</code>, <code>reason: str</code> (mensaje del <code>ValueError</code> original, que queda en <code>__cause__</code>).</td>
+    <td><code>Invalid value for field 'n': Expected a numeric value, received: 'abc'</code></td>
+  </tr>
+  <tr>
+    <td><code>CompileError</code><br><a class="src" href="../../backend/src/latexgen/core/exceptions.py">exceptions.py:60</a></td>
+    <td><code>generate</code> recibió un <code>CompileResult</code> con <code>ok=False</code> (error de LaTeX o timeout).</td>
+    <td><code>errors: list[str]</code>, <code>log: str</code>.</td>
+    <td>Los errores unidos con <code>"; "</code>, o <code>LaTeX compilation failed.</code> si la lista está vacía.</td>
+  </tr>
+  <tr>
+    <td><code>CompilerNotFoundError</code><br><a class="src" href="../../backend/src/latexgen/core/exceptions.py">exceptions.py:52</a></td>
+    <td>No se encontró el ejecutable de Tectonic. Es un problema del entorno, no del documento.</td>
+    <td>Ninguno.</td>
+    <td><code>Tectonic executable not found: 'tectonic'. Install Tectonic or pass its path to TectonicCompiler.</code></td>
+  </tr>
+</table></div>
+
+<h2>Mensajes de los escapers</h2>
+<p>Son el <code>reason</code> de <code>InvalidFieldValueError</code>. <code>{value!r}</code> es la representación de Python del valor (con comillas si es texto).</p>
+<div class="table-wrap"><table>
+  <tr><th>Tipo</th><th>Mensaje</th></tr>
+  <tr><td><code>number</code></td><td><code>Expected a numeric value, received: {value!r}</code></td></tr>
+  <tr><td><code>date</code></td><td><code>Expected an ISO date (YYYY-MM-DD), received: {value!r}</code></td></tr>
+  <tr><td><code>boolean</code></td><td><code>Cannot interpret value as boolean: {value!r}</code></td></tr>
+  <tr><td><code>enum</code></td><td><code>Value '{text}' is not among the allowed options: {options}</code></td></tr>
+</table></div>
+<p><code>get_escaper</code> también lanza <code>ValueError("No escaper available for type: …")</code> con un tipo desconocido, pero desde el pipeline no ocurre: el parser rechaza antes esos tipos.</p>
+
+<h2>Errores que no son del dominio</h2>
+<ul>
+  <li><strong>Datos en vez de excepción</strong>: <code>TectonicCompiler.compile</code> no lanza por un error de LaTeX ni por timeout; devuelve <code>CompileResult(ok=False)</code>. Solo <code>generate</code> lo convierte en <code>CompileError</code>. Quien use el compilador directamente debe revisar <code>ok</code>.</li>
+  <li><strong>Otros errores de sistema</strong>: el código solo atrapa <code>FileNotFoundError</code> y <code>TimeoutExpired</code> alrededor de <code>subprocess.run</code>. Cualquier otro (por ejemplo, permisos o disco lleno al escribir el <code>.tex</code>) se propaga sin traducir.</li>
+</ul>
+
+<h2 id="traduccion-a-http" data-toc-label="Traducción a HTTP">Traducción a HTTP <span class="badge dev">rama</span></h2>
+<p>En la rama <code>feature/backend/web</code>, <code>errors.py</code> registra un manejador por excepción. Detalle en <a href="web.html#errores-a-http">Capa web</a>.</p>
+<div class="table-wrap"><table>
+  <tr><th>Excepción</th><th>Código</th><th>Cuerpo JSON</th></tr>
+  <tr><td><code>ParseError</code></td><td>422</td><td><code>{"detail": str(exc)}</code></td></tr>
+  <tr><td><code>MissingFieldsError</code></td><td>422</td><td><code>{"detail": …, "missing_fields": [...]}</code></td></tr>
+  <tr><td><code>InvalidFieldValueError</code></td><td>422</td><td><code>{"detail": …, "field": "…"}</code></td></tr>
+  <tr><td><code>CompileError</code></td><td>422</td><td><code>{"detail": "LaTeX compilation failed.", "errors": [...]}</code></td></tr>
+  <tr><td><code>CompilerNotFoundError</code></td><td>503</td><td><code>{"detail": str(exc)}</code></td></tr>
+</table></div>
+
+</main>
+<nav class="toc" id="toc" aria-label="En esta página"></nav>
+</div>
+<script src="guide.js"></script>
+</body>
+</html>

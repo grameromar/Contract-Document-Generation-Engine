@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marcadores y tipos · latexgen</title>
+<link rel="stylesheet" href="guide.css">
+<script>try{var t=localStorage.getItem("latexgen-guide-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="content" id="content">
+
+<p class="eyebrow">Core</p>
+<h1>Marcadores y tipos</h1>
+<p class="lead">La gramática de los marcadores <code>{{…}}</code> y lo que hace cada tipo con el valor que recibe: qué acepta, cómo lo presenta y cuándo lo rechaza.</p>
+
+<h2>Gramática</h2>
+<p>Un marcador tiene la forma <code>{{ nombre [?] [: tipo [(argumento)] ] }}</code>. La define un único regex, compartido por el parser y el renderer <a class="src" href="../../backend/src/latexgen/core/markers.py">markers.py:26</a>:</p>
+<pre><code>MARKER_PATTERN = re.compile(
+    <span class="s">r"\{\{\s*(\w+)\s*(\?)?\s*(?::\s*(\w+)\s*(?:\(([^)]*)\))?\s*)?\}\}"</span>
+)</code></pre>
+
+<figure class="diagram">
+<svg viewBox="0 0 760 170" role="img" aria-label="Partes de un marcador y sus grupos de captura">
+  <rect x="20" y="40" width="60" height="44" rx="7" class="box"/><text x="50" y="68" text-anchor="middle" class="t-mono">{{</text>
+  <rect x="88" y="40" width="130" height="44" rx="7" class="box-accent"/><text x="153" y="68" text-anchor="middle" class="t-mono">monto</text>
+  <rect x="226" y="40" width="50" height="44" rx="7" class="box-accent"/><text x="251" y="68" text-anchor="middle" class="t-mono">?</text>
+  <rect x="284" y="40" width="40" height="44" rx="7" class="box"/><text x="304" y="68" text-anchor="middle" class="t-mono">:</text>
+  <rect x="332" y="40" width="130" height="44" rx="7" class="box-accent"/><text x="397" y="68" text-anchor="middle" class="t-mono">date</text>
+  <rect x="470" y="40" width="200" height="44" rx="7" class="box-accent"/><text x="570" y="68" text-anchor="middle" class="t-mono">(%d/%m/%Y)</text>
+  <rect x="678" y="40" width="60" height="44" rx="7" class="box"/><text x="708" y="68" text-anchor="middle" class="t-mono">}}</text>
+  <text x="153" y="26" text-anchor="middle" class="t-acc">GRUPO 1</text>
+  <text x="251" y="26" text-anchor="middle" class="t-acc">GRUPO 2</text>
+  <text x="397" y="26" text-anchor="middle" class="t-acc">GRUPO 3</text>
+  <text x="570" y="26" text-anchor="middle" class="t-acc">GRUPO 4</text>
+  <text x="153" y="106" text-anchor="middle" class="t">nombre</text>
+  <text x="153" y="124" text-anchor="middle" class="t-sm">letras, dígitos, _</text>
+  <text x="251" y="106" text-anchor="middle" class="t">opcional</text>
+  <text x="251" y="124" text-anchor="middle" class="t-sm">si aparece</text>
+  <text x="397" y="106" text-anchor="middle" class="t">tipo</text>
+  <text x="397" y="124" text-anchor="middle" class="t-sm">string si falta</text>
+  <text x="570" y="106" text-anchor="middle" class="t">argumento</text>
+  <text x="570" y="124" text-anchor="middle" class="t-sm">opciones del enum o formato del date</text>
+  <text x="380" y="156" text-anchor="middle" class="t-sm">Se admiten espacios entre todas las partes: {{ monto ? : date ( %d/%m/%Y ) }} es el mismo marcador.</text>
+</svg>
+</figure>
+
+<div class="table-wrap"><table>
+  <tr><th>Grupo</th><th>Parte</th><th>Qué hace el parser con él</th></tr>
+  <tr><td>1</td><td>Nombre: <code>\w+</code></td><td>Identifica el campo. En Python, <code>\w</code> es Unicode: <code>{{año}}</code> es válido.</td></tr>
+  <tr><td>2</td><td><code>?</code> opcional</td><td>Si aparece, <code>required=False</code>. Si no, el campo es obligatorio.</td></tr>
+  <tr><td>3</td><td>Tipo: <code>\w+</code></td><td>Se pasa a minúsculas (<code>NUMBER</code> vale como <code>number</code>). Ausente significa <code>string</code>. Fuera de <code>VALID_TYPES</code> es <code>ParseError</code>.</td></tr>
+  <tr><td>4</td><td>Argumento: <code>[^)]*</code></td><td>En <code>enum</code>, lista de opciones separadas por comas. En <code>date</code>, el formato strftime. En los demás tipos se ignora.</td></tr>
+</table></div>
+
+<h2>Reglas del parser</h2>
+<ul>
+  <li><strong>Tipos válidos</strong>: <code>string</code>, <code>number</code>, <code>date</code>, <code>boolean</code>, <code>enum</code> <a class="src" href="../../backend/src/latexgen/core/parser.py">parser.py:17</a>.</li>
+  <li><strong>Opciones de enum</strong>: se separan por comas, se les quitan los espacios de los extremos y se descartan las vacías. Un enum sin opciones (<code>enum()</code> o <code>enum( , )</code>) se convierte en un campo <code>string</code>.</li>
+  <li><strong>Formato de date</strong>: se guarda sin espacios en los extremos. Si falta o queda vacío, <code>date_format</code> es <code>None</code> y se usará ISO (<code>%Y-%m-%d</code>).</li>
+  <li><strong>Repeticiones</strong>: un campo puede aparecer varias veces si todas sus declaraciones son idénticas (tipo, obligatoriedad, opciones y formato). Cualquier diferencia es <code>ParseError</code>; por ejemplo <code>{{x}}</code> y <code>{{x?}}</code>, o <code>{{d:date}}</code> y <code>{{d}}</code>.</li>
+  <li><strong>Lo que no cumple la gramática no es marcador</strong>: se queda como texto en el documento, sin error. Ejemplos: <code>{{a-b}}</code> (guion en el nombre), <code>{{x:date(%d (x))}}</code> (un <code>)</code> dentro del argumento) y <code>{{ x:enum(a)b }}</code> (texto después del paréntesis).</li>
+</ul>
+
+<h3>Ejemplos verificados</h3>
+<p>Salida real de <code>parse_template</code> para cada marcador suelto:</p>
+<div class="table-wrap"><table>
+  <tr><th>Marcador</th><th>Campo resultante</th></tr>
+  <tr><td><code>{{nombre}}</code></td><td><code>name='nombre', type='string', required=True</code></td></tr>
+  <tr><td><code>{{nota?}}</code></td><td><code>type='string', required=False</code></td></tr>
+  <tr><td><code>{{nombre ?}}</code></td><td><code>type='string', required=False</code></td></tr>
+  <tr><td><code>{{edad?:number}}</code></td><td><code>type='number', required=False</code></td></tr>
+  <tr><td><code>{{edad : NUMBER}}</code></td><td><code>type='number', required=True</code></td></tr>
+  <tr><td><code>{{pais:enum(México, USA ,Canadá)}}</code></td><td><code>type='enum', options=['México', 'USA', 'Canadá']</code></td></tr>
+  <tr><td><code>{{rol:enum()}}</code></td><td><code>type='string'</code> (enum sin opciones)</td></tr>
+  <tr><td><code>{{inicio:date}}</code></td><td><code>type='date', date_format=None</code></td></tr>
+  <tr><td><code>{{inicio:date(%d/%m/%Y)}}</code></td><td><code>type='date', date_format='%d/%m/%Y'</code></td></tr>
+  <tr><td><code>{{monto:number(2)}}</code></td><td><code>type='number'</code> (el argumento se ignora)</td></tr>
+  <tr><td><code>{{x:color}}</code></td><td><code>ParseError</code>: Unsupported type 'color' for field 'x'. Valid types: boolean, date, enum, number, string.</td></tr>
+  <tr><td><code>{{a-b}}</code></td><td>Ningún campo: no es un marcador.</td></tr>
+</table></div>
+
+<h2>Tipos y escape</h2>
+<p>El renderer pide a <code>get_escaper</code> una función por tipo <a class="src" href="../../backend/src/latexgen/core/escaping.py">escaping.py:263</a>. Cada una valida, da formato y devuelve texto seguro para LaTeX; si el valor no sirve, lanza <code>ValueError</code>, que el renderer convierte en <code>InvalidFieldValueError</code>. Los campos opcionales vacíos nunca llegan al escaper: se sustituyen por <code>""</code>.</p>
+
+<div class="table-wrap"><table>
+  <tr><th>Tipo</th><th>Acepta</th><th>Produce</th><th>Rechaza</th></tr>
+  <tr><td><code>string</code></td><td>Cualquier valor (se convierte con <code>str</code>).</td><td>El texto con los 10 caracteres especiales escapados.</td><td>Nada.</td></tr>
+  <tr><td><code>number</code></td><td>Enteros, decimales y texto numérico, con o sin comas de miles.</td><td>Número con comas de miles: <code>1,234,567</code>, <code>1,234.56</code>.</td><td>Lo que no sea <code>-?\d+(\.\d+)?</code> tras quitar comas y espacios.</td></tr>
+  <tr><td><code>date</code></td><td><code>datetime.date</code> o texto ISO 8601.</td><td>La fecha con el formato del marcador (ISO si no tiene).</td><td>Texto que <code>date.fromisoformat</code> no entiende.</td></tr>
+  <tr><td><code>boolean</code></td><td><code>True</code>/<code>False</code> y textos conocidos.</td><td><code>Sí</code> o <code>No</code>.</td><td>Cualquier otro texto, y números como <code>2</code>.</td></tr>
+  <tr><td><code>enum</code></td><td>Exactamente una de las opciones.</td><td>La opción, escapada.</td><td>Cualquier otro valor.</td></tr>
+</table></div>
+
+<div class="tabs">
+  <div class="tab-list" role="tablist">
+    <button type="button">string</button>
+    <button type="button">number</button>
+    <button type="button">date</button>
+    <button type="button">boolean</button>
+    <button type="button">enum</button>
+  </div>
+
+  <div class="tab-panel">
+    <p><code>_escape_string</code> <a class="src" href="../../backend/src/latexgen/core/escaping.py">escaping.py:91</a> convierte el valor a texto y aplica <code>escape_latex</code>. <code>None</code> da <code>""</code>, no el texto "None". Es también el escaper de un <code>enum</code> sin opciones.</p>
+    <p>Los 10 caracteres especiales se reemplazan en una sola pasada <a class="src" href="../../backend/src/latexgen/core/escaping.py">escaping.py:32</a>:</p>
+    <div class="table-wrap"><table>
+      <tr><th>Carácter</th><th>Se escribe como</th><th>Carácter</th><th>Se escribe como</th></tr>
+      <tr><td><code>\</code></td><td><code>\textbackslash{}</code></td><td><code>_</code></td><td><code>\_</code></td></tr>
+      <tr><td><code>&amp;</code></td><td><code>\&amp;</code></td><td><code>{</code></td><td><code>\{</code></td></tr>
+      <tr><td><code>%</code></td><td><code>\%</code></td><td><code>}</code></td><td><code>\}</code></td></tr>
+      <tr><td><code>$</code></td><td><code>\$</code></td><td><code>~</code></td><td><code>\textasciitilde{}</code></td></tr>
+      <tr><td><code>#</code></td><td><code>\#</code></td><td><code>^</code></td><td><code>\textasciicircum{}</code></td></tr>
+    </table></div>
+    <p><code>~</code>, <code>^</code> y <code>\</code> no se escapan con una barra porque <code>\~</code> y <code>\^</code> son acentos y <code>\\</code> es salto de línea en LaTeX.</p>
+  </div>
+
+  <div class="tab-panel">
+    <p><code>_escape_number</code> <a class="src" href="../../backend/src/latexgen/core/escaping.py">escaping.py:111</a>:</p>
+    <ol>
+      <li>Convierte el valor a texto, quita todas las comas y los espacios de los extremos.</li>
+      <li>Exige <code>^-?\d+(\.\d+)?$</code>: signo menos opcional, dígitos y, como mucho, una parte decimal. No admite <code>+</code>, notación científica ni varios puntos.</li>
+      <li>Lo convierte a <code>float</code>. Si el texto tenía punto decimal, lo formatea como float con comas; si no, como entero con comas.</li>
+    </ol>
+    <div class="table-wrap"><table>
+      <tr><th>Entrada</th><th>Salida</th><th>Nota</th></tr>
+      <tr><td><code>"1234567"</code></td><td><code>1,234,567</code></td><td></td></tr>
+      <tr><td><code>1500.0</code></td><td><code>1,500.0</code></td><td>Conserva la notación decimal.</td></tr>
+      <tr><td><code>"1234.5000"</code></td><td><code>1,234.5</code></td><td>Los ceros finales se pierden.</td></tr>
+      <tr><td><code>"1,23,45"</code></td><td><code>12,345</code></td><td>Agrupación mal hecha: las comas son cosméticas.</td></tr>
+      <tr><td><code>"-123456.78"</code></td><td><code>-123,456.78</code></td><td></td></tr>
+      <tr><td><code>"12.34.56"</code>, <code>"abc"</code>, <code>""</code>, <code>None</code></td><td><code>ValueError</code></td><td></td></tr>
+    </table></div>
+    <div class="callout warn">
+      <div class="callout-title">Límites observados (paso por float)</div>
+      <p>Como todo número pasa por <code>float</code>, con valores grandes o muy precisos la salida cambia. Comprobado con el código actual:</p>
+      <ul>
+        <li><code>"12345678901234567890"</code> da <code>12,345,678,901,234,567,168</code> (pierde precisión).</li>
+        <li><code>"123456789.123456789"</code> da <code>123,456,789.12345679</code>.</li>
+        <li>Con punto decimal, a partir de 10<sup>16</sup> o por debajo de 0.0001 sale en notación científica: <code>"99999999999999999.0"</code> da <code>1e+17</code> y <code>"0.00001"</code> da <code>1e-05</code>.</li>
+      </ul>
+      <p>Ninguna prueba cubre estos casos.</p>
+      <p><strong>Decidido, sin implementar:</strong> el número conservará el decimal tal como lo escribe el usuario, sin pasar por <code>float</code>; se permite quitar los ceros a la derecha.</p>
+    </div>
+  </div>
+
+  <div class="tab-panel">
+    <p><code>_make_date_escaper(date_format)</code> <a class="src" href="../../backend/src/latexgen/core/escaping.py">escaping.py:144</a> fabrica un escaper con el formato capturado. El escaper:</p>
+    <ul>
+      <li>Usa el valor tal cual si ya es un <code>datetime.date</code>.</li>
+      <li>Si no, lo convierte a texto, quita espacios y llama a <code>date.fromisoformat</code>. Es lo que produce un <code>&lt;input type="date"&gt;</code> de HTML: <code>AAAA-MM-DD</code>. Con Python 3.11 (el del entorno) también acepta otras formas ISO 8601, como <code>20240115</code> o <code>2024-W03-1</code>; <code>2024-1-5</code> no.</li>
+      <li>Rechaza fechas imposibles: <code>2023-02-29</code> es <code>ValueError</code>.</li>
+      <li>Devuelve <code>parsed.strftime(date_format)</code>.</li>
+    </ul>
+    <div class="callout warn">
+      <div class="callout-title">Los nombres de meses y días dependen del locale</div>
+      <p>Directivas como <code>%B</code> o <code>%A</code> siguen el locale del proceso, y el código no lo configura. En este equipo, <code>{{f:date(%d de %B de %Y)}}</code> con <code>2024-01-05</code> produce <code>05 de January de 2024</code>.</p>
+      <p><strong>Decidido, sin implementar:</strong> el idioma de meses y días será elegible, con español por defecto.</p>
+    </div>
+    <p>La salida de strftime no se escapa. El formato lo escribe el autor de la plantilla, no el usuario que llena el formulario.</p>
+  </div>
+
+  <div class="tab-panel">
+    <p><code>_escape_boolean</code> <a class="src" href="../../backend/src/latexgen/core/escaping.py">escaping.py:190</a> devuelve <code>Sí</code> o <code>No</code>, textos fijos que no necesitan escape. Un <code>bool</code> de Python se traduce directo; cualquier otro valor se convierte a texto, sin espacios y en minúsculas, y se busca en dos conjuntos:</p>
+    <div class="table-wrap"><table>
+      <tr><th>Resultado</th><th>Textos aceptados</th></tr>
+      <tr><td><code>Sí</code></td><td><code>true</code>, <code>1</code>, <code>yes</code>, <code>y</code>, <code>si</code>, <code>sí</code>, <code>on</code>, <code>verdadero</code></td></tr>
+      <tr><td><code>No</code></td><td><code>false</code>, <code>0</code>, <code>no</code>, <code>n</code>, <code>off</code>, <code>falso</code>, cadena vacía</td></tr>
+    </table></div>
+    <p>Todo lo demás es <code>ValueError</code>, para que una errata no termine en un "No" silencioso. La cadena vacía figura entre los falsos, pero desde el renderer nunca llega: un valor vacío cuenta como "no proporcionado".</p>
+  </div>
+
+  <div class="tab-panel">
+    <p><code>_make_enum_escaper(options)</code> <a class="src" href="../../backend/src/latexgen/core/escaping.py">escaping.py:218</a> acepta solo valores idénticos a una opción: distingue mayúsculas y no recorta espacios del valor (las opciones sí se recortaron al parsear). El valor aceptado se escapa como texto, porque una opción puede contener caracteres especiales.</p>
+    <pre><code>{{pais:enum(México,USA,Canadá)}}
+<span class="c"># "USA"  → USA</span>
+<span class="c"># "usa"  → ValueError: Value 'usa' is not among the allowed options: ['México', 'USA', 'Canadá']</span></code></pre>
+  </div>
+</div>
+
+<p>Prueba cualquiera de estas reglas en la <a href="pipeline.html#demostracion-interactiva">demostración interactiva</a>.</p>
+
+</main>
+<nav class="toc" id="toc" aria-label="En esta página"></nav>
+</div>
+<script src="guide.js"></script>
+</body>
+</html>

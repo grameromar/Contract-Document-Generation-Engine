@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flujo de ejecución · latexgen</title>
+<link rel="stylesheet" href="guide.css">
+<script>try{var t=localStorage.getItem("latexgen-guide-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="content" id="content">
+
+<p class="eyebrow">Visión general</p>
+<h1>Flujo de ejecución</h1>
+<p class="lead">Qué ocurre, en orden, cuando se llama a <code>TemplateService.generate(template, values)</code>: tres etapas (parser, renderer, compiler) y en qué punto puede fallar cada una.</p>
+
+<h2>Secuencia de <code>generate</code></h2>
+<figure class="diagram">
+<svg viewBox="0 0 850 480" role="img" aria-label="Diagrama de secuencia de TemplateService.generate">
+  <defs>
+    <marker id="s1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head-acc"/></marker>
+    <marker id="s2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head"/></marker>
+  </defs>
+  <!-- headers -->
+  <rect x="7" y="10" width="96" height="40" rx="8" class="box"/><text x="55" y="35" text-anchor="middle" class="t">Quien llama</text>
+  <rect x="145" y="10" width="120" height="40" rx="8" class="box-accent"/><text x="205" y="35" text-anchor="middle" class="t-mono">TemplateService</text>
+  <rect x="277" y="10" width="116" height="40" rx="8" class="box"/><text x="335" y="35" text-anchor="middle" class="t-mono">parse_template</text>
+  <rect x="412" y="10" width="96" height="40" rx="8" class="box"/><text x="460" y="35" text-anchor="middle" class="t-mono">Renderer</text>
+  <rect x="537" y="10" width="86" height="40" rx="8" class="box"/><text x="580" y="35" text-anchor="middle" class="t-mono">escapers</text>
+  <rect x="628" y="10" width="124" height="40" rx="8" class="box"/><text x="690" y="35" text-anchor="middle" class="t-mono">TectonicCompiler</text>
+  <rect x="762" y="10" width="80" height="40" rx="8" class="box-muted"/><text x="802" y="35" text-anchor="middle" class="t">tectonic</text>
+  <!-- lifelines -->
+  <line x1="55" y1="50" x2="55" y2="470" class="lifeline"/>
+  <line x1="205" y1="50" x2="205" y2="470" class="lifeline"/>
+  <line x1="335" y1="50" x2="335" y2="470" class="lifeline"/>
+  <line x1="460" y1="50" x2="460" y2="470" class="lifeline"/>
+  <line x1="580" y1="50" x2="580" y2="470" class="lifeline"/>
+  <line x1="690" y1="50" x2="690" y2="470" class="lifeline"/>
+  <line x1="802" y1="50" x2="802" y2="470" class="lifeline"/>
+  <!-- messages -->
+  <text x="62" y="76" class="t-sm">generate(template, values)</text>
+  <line x1="55" y1="84" x2="203" y2="84" class="line-acc" marker-end="url(#s1)"/>
+  <text x="212" y="108" class="t-sm">parse(template)</text>
+  <line x1="205" y1="116" x2="333" y2="116" class="line-acc" marker-end="url(#s1)"/>
+  <text x="212" y="140" class="t-sm">list[TemplateField]</text>
+  <line x1="335" y1="148" x2="207" y2="148" class="line" stroke-dasharray="4 4" marker-end="url(#s2)"/>
+  <text x="212" y="174" class="t-sm">render(template, fields, values)</text>
+  <line x1="205" y1="182" x2="458" y2="182" class="line-acc" marker-end="url(#s1)"/>
+  <text x="468" y="206" class="t-err">¿falta un obligatorio?</text>
+  <text x="468" y="220" class="t-err">MissingFieldsError</text>
+  <text x="468" y="246" class="t-sm">por campo: get_escaper(…)(raw)</text>
+  <line x1="460" y1="254" x2="578" y2="254" class="line-acc" marker-end="url(#s1)"/>
+  <text x="468" y="278" class="t-sm">texto escapado o ValueError</text>
+  <line x1="580" y1="286" x2="462" y2="286" class="line" stroke-dasharray="4 4" marker-end="url(#s2)"/>
+  <text x="212" y="310" class="t-sm">tex_source (MARKER_PATTERN.sub)</text>
+  <line x1="460" y1="318" x2="207" y2="318" class="line" stroke-dasharray="4 4" marker-end="url(#s2)"/>
+  <text x="212" y="342" class="t-sm">compile(tex_source)</text>
+  <line x1="205" y1="350" x2="688" y2="350" class="line-acc" marker-end="url(#s1)"/>
+  <text x="697" y="372" class="t-sm">--outdir dir</text>
+  <line x1="690" y1="380" x2="800" y2="380" class="line-acc" marker-end="url(#s1)"/>
+  <text x="697" y="402" class="t-sm">código, stderr, PDF</text>
+  <line x1="802" y1="410" x2="692" y2="410" class="line" stroke-dasharray="4 4" marker-end="url(#s2)"/>
+  <text x="212" y="428" class="t-sm">CompileResult(ok, pdf, log, errors)</text>
+  <line x1="690" y1="436" x2="207" y2="436" class="line" stroke-dasharray="4 4" marker-end="url(#s2)"/>
+  <text x="62" y="456" class="t-sm">bytes del PDF</text>
+  <line x1="205" y1="464" x2="57" y2="464" class="line" stroke-dasharray="4 4" marker-end="url(#s2)"/>
+</svg>
+<figcaption>Flechas continuas: llamadas. Punteadas: valores de retorno. Los errores de cada etapa se detallan abajo.</figcaption>
+</figure>
+
+<h2>Paso a paso</h2>
+
+<h3 data-toc="yes" data-toc-label="1. Parse">1. Parse: descubrir los campos</h3>
+<p><code>generate</code> empieza llamando a <code>self.parse(template)</code>, que delega en <code>parse_template</code> <a class="src" href="../../backend/src/latexgen/core/parser.py">parser.py:20</a>. Recorre la plantilla con <code>MARKER_PATTERN.finditer</code> y, por cada marcador:</p>
+<ol>
+  <li>Lee el nombre, si lleva <code>?</code> (opcional), el tipo (por defecto <code>string</code>, pasado a minúsculas) y el argumento entre paréntesis.</li>
+  <li>Si el tipo no está en <code>VALID_TYPES</code>, lanza <code>ParseError</code>.</li>
+  <li>Construye el <code>TemplateField</code> con <code>_build_field</code>: un enum sin opciones pasa a ser string, y un date guarda su argumento como formato.</li>
+  <li>Si el nombre ya apareció, compara el campo nuevo con el guardado (igualdad de dataclass). Si difiere en algo, lanza <code>ParseError</code>; si es igual, lo ignora.</li>
+</ol>
+<p>Resultado: un campo por nombre, en orden de primera aparición. Como <code>generate</code> analiza de nuevo, los campos que el cliente creyera tener no importan.</p>
+
+<h3 data-toc="yes" data-toc-label="2. Render">2. Render: validar, escapar y sustituir</h3>
+<p><code>Renderer.render(template, fields, values)</code> <a class="src" href="../../backend/src/latexgen/core/renderer.py">renderer.py:24</a> hace tres cosas, en este orden:</p>
+<ol>
+  <li><strong>Obligatorios</strong>: junta todos los campos obligatorios sin valor y, si hay alguno, lanza un único <code>MissingFieldsError</code> con la lista completa. "Sin valor" significa <code>None</code>, ausente del diccionario o una cadena vacía o de solo espacios; <code>0</code> y <code>False</code> sí cuentan como valor <a class="src" href="../../backend/src/latexgen/core/renderer.py">renderer.py:101</a>.</li>
+  <li><strong>Escape</strong>: para cada campo con valor pide su escaper a <code>get_escaper</code> y lo aplica. Un campo opcional vacío se convierte en <code>""</code>. Si el escaper lanza <code>ValueError</code>, se envuelve en <code>InvalidFieldValueError</code> con el nombre del campo. Se detiene en el primer valor inválido.</li>
+  <li><strong>Sustitución</strong>: <code>MARKER_PATTERN.sub</code> reemplaza cada marcador por el texto escapado de su campo. Todas las apariciones de un campo reciben el mismo valor. Un marcador cuyo nombre no está entre los campos se deja tal cual.</li>
+</ol>
+<p>Los valores extra en <code>values</code> que no corresponden a ningún campo se ignoran.</p>
+
+<h3 data-toc="yes" data-toc-label="3. Compile">3. Compile: LaTeX a PDF</h3>
+<p><code>TectonicCompiler.compile(tex_source)</code> <a class="src" href="../../backend/src/latexgen/core/compiler.py">compiler.py:63</a>:</p>
+<ol>
+  <li>Crea un directorio temporal (se borra al terminar) y escribe ahí <code>document.tex</code> en UTF-8.</li>
+  <li>Ejecuta <code>tectonic --outdir &lt;dir&gt; &lt;dir&gt;/document.tex</code> con <code>subprocess.run</code>, capturando la salida como texto y con un límite de <code>timeout</code> segundos (30 por defecto).</li>
+  <li>Interpreta el resultado:</li>
+</ol>
+<div class="table-wrap"><table>
+  <tr><th>Situación</th><th>Resultado</th></tr>
+  <tr><td>No se encuentra el ejecutable (<code>FileNotFoundError</code>)</td><td>Lanza <code>CompilerNotFoundError</code>.</td></tr>
+  <tr><td>Se agota el tiempo (<code>TimeoutExpired</code>)</td><td><code>CompileResult(ok=False, errors=["Compilation timed out after 30s."])</code>, con <code>log</code> vacío.</td></tr>
+  <tr><td>Código de salida distinto de 0</td><td><code>CompileResult(ok=False, log=stderr, errors=…)</code>. Los errores son las líneas de stderr que empiezan por <code>error:</code> o por <code>!</code>; si no hay ninguna, <code>["LaTeX compilation failed."]</code>.</td></tr>
+  <tr><td>Código 0</td><td><code>CompileResult(ok=True, pdf=&lt;bytes de document.pdf&gt;, log=stderr)</code>.</td></tr>
+</table></div>
+<p>Solo se guarda stderr en <code>log</code>; stdout se captura pero no se usa.</p>
+
+<h3 data-toc="yes" data-toc-label="4. Resultado">4. Resultado</h3>
+<p>De vuelta en <code>generate</code> <a class="src" href="../../backend/src/latexgen/core/service.py">service.py:70</a>: si <code>result.ok</code> es falso, lanza <code>CompileError(result.errors, result.log)</code>; si no, devuelve <code>result.pdf</code>. Las excepciones del parser, del renderer y <code>CompilerNotFoundError</code> no se capturan: llegan a quien llamó tal cual.</p>
+
+<h2>Demostración interactiva</h2>
+<p>Escribe una plantilla y valores: la demostración ejecuta en tu navegador el parser y el renderer, con los mismos mensajes de error. No compila: el resultado es el LaTeX que recibiría Tectonic.</p>
+
+<div class="demo" id="demo">
+  <label for="tpl">Plantilla (.tex)</label>
+  <textarea id="tpl" rows="10" spellcheck="false"></textarea>
+  <div class="demo-presets" id="presets"></div>
+  <div class="demo-row">
+    <div>
+      <label>Campos detectados (<code>parse_template</code>)</label>
+      <div class="demo-out" id="fields-out" aria-live="polite"></div>
+      <label style="margin-top:12px">Valores</label>
+      <div id="values-form"></div>
+    </div>
+    <div>
+      <label>LaTeX resultante (<code>Renderer.render</code>)</label>
+      <div class="demo-out" id="render-out" aria-live="polite"></div>
+    </div>
+  </div>
+  <p class="demo-note">Port en JavaScript del core (<code>docs/guide/demo.js</code>), comparado con el Python real en 24 casos con resultados idénticos. Diferencias conocidas: en <code>date</code> solo acepta entradas <code>AAAA-MM-DD</code> y las directivas <code>%Y %m %d %y %j %%</code> (Python acepta más formas ISO 8601 y todas las directivas de strftime); en <code>number</code> solo dígitos ASCII.</p>
+</div>
+
+<h3>Escape de texto libre</h3>
+<p><code>escape_latex</code> sobre cualquier texto, el mismo escape que recibe un campo <code>string</code>:</p>
+<div class="demo">
+  <label for="esc-in">Texto</label>
+  <input type="text" id="esc-in" value="50% de $1,000 & \input{secreto} ~_^#{}">
+  <label style="margin-top:12px">Resultado</label>
+  <div class="demo-out" id="esc-out"></div>
+</div>
+
+</main>
+<nav class="toc" id="toc" aria-label="En esta página"></nav>
+</div>
+<script src="guide.js"></script>
+<script src="demo.js"></script>
+<script>
+(function () {
+  "use strict";
+  const D = window.LatexgenDemo;
+  const PRESETS = [
+    { label: "Contrato", template:
+"\\documentclass{article}\n\\begin{document}\nContrato de arrendamiento entre {{arrendador}} y {{inquilino}}.\nRenta mensual: \\${{renta:number}} a partir del {{inicio:date(%d/%m/%Y)}}.\nIncluye estacionamiento: {{estacionamiento:boolean}}.\nPaís: {{pais:enum(México,USA,Canadá)}}.\nFirma: {{arrendador}}.\nNotas: {{notas?}}\n\\end{document}",
+      values: { arrendador: "Inmobiliaria Pérez & Hijos", inquilino: "Ana_López", renta: "12500.50",
+        inicio: "2026-10-07", estacionamiento: "sí", pais: "México" } },
+    { label: "Opcionales", template: "Nombre: {{nombre}}\nEdad: {{edad?:number}}\nRol: {{rol?:enum(Admin, User)}}",
+      values: { nombre: "Luis" } },
+    { label: "Inyección", template: "Comentario: {{comentario}}",
+      values: { comentario: "\\input{/etc/passwd} 100% seguro" } },
+    { label: "Error: tipo", template: "{{color:colour}}", values: {} },
+    { label: "Error: inconsistente", template: "{{monto:number}} y luego {{monto}}", values: {} },
+    { label: "Marcador inválido", template: "Válido: {{a}}\nNo es marcador: {{ a-b }} {{f:date(%d (x))}}", values: { a: "ok" } },
+  ];
+
+  const tpl = document.getElementById("tpl");
+  const fieldsOut = document.getElementById("fields-out");
+  const valuesForm = document.getElementById("values-form");
+  const renderOut = document.getElementById("render-out");
+  const values = {};
+
+  const HINTS = {
+    string: "texto libre",
+    number: "p. ej. 1234.5 o 1,250",
+    date: "AAAA-MM-DD",
+    boolean: "sí / no / true / 0 …",
+    enum: "una de las opciones",
+  };
+
+  function showError(target, err) {
+    target.innerHTML = "";
+    const strong = document.createElement("strong");
+    strong.style.color = "var(--err)";
+    strong.textContent = err.constructor.name + ": ";
+    target.appendChild(strong);
+    target.appendChild(document.createTextNode(err.message));
+  }
+
+  function chip(f) {
+    const node = document.createElement("span");
+    node.className = "field-chip";
+    let text = f.name + ": " + f.type;
+    if (f.options.length) text += "(" + f.options.join(", ") + ")";
+    if (f.date_format) text += "(" + f.date_format + ")";
+    node.appendChild(document.createTextNode(text));
+    const flag = document.createElement("span");
+    flag.className = f.required ? "req" : "opt";
+    flag.textContent = f.required ? "obligatorio" : "opcional";
+    node.appendChild(flag);
+    return node;
+  }
+
+  function update() {
+    let fields;
+    try {
+      fields = D.parseTemplate(tpl.value);
+    } catch (err) {
+      showError(fieldsOut, err);
+      valuesForm.innerHTML = "";
+      renderOut.textContent = "(el parse falló: no hay render)";
+      return;
+    }
+    fieldsOut.innerHTML = "";
+    if (!fields.length) fieldsOut.textContent = "[] (sin marcadores)";
+    fields.forEach((f) => fieldsOut.appendChild(chip(f)));
+
+    const focusedName = document.activeElement && document.activeElement.dataset.field;
+    valuesForm.innerHTML = "";
+    fields.forEach((f) => {
+      const id = "val-" + f.name;
+      const label = document.createElement("label");
+      label.htmlFor = id;
+      label.style.marginTop = "8px";
+      label.textContent = f.name + (f.required ? " *" : "");
+      const input = document.createElement("input");
+      input.type = "text";
+      input.id = id;
+      input.dataset.field = f.name;
+      input.placeholder = HINTS[f.type];
+      input.value = values[f.name] || "";
+      if (f.type === "enum") {
+        const list = document.createElement("datalist");
+        list.id = id + "-list";
+        f.options.forEach((o) => { const opt = document.createElement("option"); opt.value = o; list.appendChild(opt); });
+        input.setAttribute("list", list.id);
+        valuesForm.appendChild(list);
+      }
+      input.addEventListener("input", () => { values[f.name] = input.value; renderOnly(fields); });
+      valuesForm.appendChild(label);
+      valuesForm.appendChild(input);
+      if (f.name === focusedName) input.focus();
+    });
+    renderOnly(fields);
+  }
+
+  function renderOnly(fields) {
+    const current = {};
+    fields.forEach((f) => { if (values[f.name] !== undefined) current[f.name] = values[f.name]; });
+    try {
+      renderOut.textContent = D.render(tpl.value, fields, current);
+    } catch (err) {
+      showError(renderOut, err);
+    }
+  }
+
+  const presets = document.getElementById("presets");
+  PRESETS.forEach((preset, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn";
+    button.textContent = preset.label;
+    button.addEventListener("click", () => load(index));
+    presets.appendChild(button);
+  });
+
+  function load(index) {
+    const preset = PRESETS[index];
+    Object.keys(values).forEach((k) => delete values[k]);
+    Object.assign(values, preset.values);
+    tpl.value = preset.template;
+    update();
+  }
+
+  tpl.addEventListener("input", update);
+  load(0);
+
+  const escIn = document.getElementById("esc-in");
+  const escOut = document.getElementById("esc-out");
+  function escUpdate() { escOut.textContent = D.escapeLatex(escIn.value); }
+  escIn.addEventListener("input", escUpdate);
+  escUpdate();
+})();
+</script>
+</body>
+</html>

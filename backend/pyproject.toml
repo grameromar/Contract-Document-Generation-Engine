@@ -21,3 +21,9 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+filterwarnings = [
+    # Starlette's TestClient prefers httpx2 and warns when it falls back to
+    # httpx. The tests behave the same with either client, so this one
+    # deprecation notice is silenced; any other warning still shows.
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated:starlette.exceptions.StarletteDeprecationWarning",
+]

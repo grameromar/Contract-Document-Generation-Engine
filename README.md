@@ -72,7 +72,7 @@ Domain errors (`ParseError`, `MissingFieldsError`, `InvalidFieldValueError`,
 From `backend/`:
 
 ```powershell
-pytest test
+pytest
 ```
 
 Tests that compile with the real Tectonic engine are skipped automatically

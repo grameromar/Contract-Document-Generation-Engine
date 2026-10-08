@@ -19,7 +19,7 @@
 <div class="dev-banner">
   <span class="badge dev">rama</span>
   <div>
-    <strong>Nada de esta página está en <code>main</code>.</strong> El código vive en la rama local <code>feature/backend/web</code> (commit <code>0821da7</code>, 2026-06-24), que no se ha fusionado ni subido al remoto. La rama <code>feature/backend/web-generate-endpoint</code> apunta al mismo commit, y sobre ella hay un stash del 2026-07-03 con el inicio de <code>/generate</code>. Todo lo descrito aquí se verificó en una copia temporal de la rama, sin cambiar de rama en el repositorio.
+    <strong>Nada de esta página está en <code>main</code>.</strong> El código vive en la rama <code>feature/backend/web</code> (commit <code>c593a65</code>), subida al remoto pero sin fusionar. La rama <code>feature/backend/web-generate-endpoint</code> parte de ella y añade el inicio de <code>/generate</code> (commit <code>8df8759</code>, que antes era un stash).
   </div>
 </div>
 
@@ -30,8 +30,8 @@ git show feature/backend/web:backend/src/latexgen/web/routes.py
 <span class="c"># o cambiar a la rama (con el árbol de trabajo limpio)</span>
 git switch feature/backend/web
 
-<span class="c"># ver el contenido del stash</span>
-git stash show -p stash@{0}</code></pre>
+<span class="c"># ver lo que añade la rama de /generate</span>
+git diff feature/backend/web feature/backend/web-generate-endpoint</code></pre>
 
 <h2>Qué añade la rama</h2>
 <div class="table-wrap"><table>
@@ -44,7 +44,7 @@ git stash show -p stash@{0}</code></pre>
   <tr><td><code>src/latexgen/web/config.py</code></td><td><code>load_settings()</code>: lee el YAML con PyYAML y lo valida con el modelo Pydantic <code>Settings</code>.</td></tr>
   <tr><td><code>config/settings.yaml</code></td><td>Configuración: hoy solo <code>cors_origins</code>.</td></tr>
   <tr><td><code>test/unit/test_web_parse.py</code></td><td>7 pruebas de <code>/parse</code> con <code>TestClient</code>.</td></tr>
-  <tr><td><code>pyproject.toml</code></td><td>Añade <code>fastapi&gt;=0.110</code>, <code>uvicorn[standard]&gt;=0.29</code>, <code>pyyaml&gt;=6.0</code>, y <code>httpx&gt;=0.27</code> en <code>dev</code>.</td></tr>
+  <tr><td><code>pyproject.toml</code></td><td>Añade <code>fastapi&gt;=0.110</code>, <code>uvicorn[standard]&gt;=0.29</code>, <code>pyyaml&gt;=6.0</code>, y <code>httpx&gt;=0.27</code> en <code>dev</code>. Filtra el aviso de Starlette sobre <code>httpx</code> en las pruebas.</td></tr>
 </table></div>
 <p>La capa web solo traduce: no tiene lógica de negocio, y Pydantic queda fuera del core.</p>
 
@@ -154,7 +154,7 @@ cors_origins:
 <p>Probado con <code>uvicorn latexgen.web.main:app --port 8765</code>: arranca y responde. FastAPI sirve la documentación automática de la API en <code>/docs</code>.</p>
 
 <h2><code>POST /generate</code>: lo que hay</h2>
-<p>El stash <code>stash@{0}</code> solo añade a <code>schemas.py</code> este modelo. No hay ruta: hoy <code>POST /generate</code> responde 404.</p>
+<p>La rama <code>feature/backend/web-generate-endpoint</code> solo añade a <code>schemas.py</code> este modelo. No hay ruta: hoy <code>POST /generate</code> responde 404.</p>
 <pre><code><span class="k">class</span> <span class="f">GenerateRequest</span>(BaseModel):
     template: str = Field(..., description=<span class="s">"Raw .tex template text."</span>)
     values: dict[str, str | int | float | bool | None] = Field(

@@ -141,7 +141,8 @@
         <li><code>"123456789.123456789"</code> da <code>123,456,789.12345679</code>.</li>
         <li>Con punto decimal, a partir de 10<sup>16</sup> o por debajo de 0.0001 sale en notación científica: <code>"99999999999999999.0"</code> da <code>1e+17</code> y <code>"0.00001"</code> da <code>1e-05</code>.</li>
       </ul>
-      <p>Ninguna prueba cubre estos casos; no está claro si son intencionales.</p>
+      <p>Ninguna prueba cubre estos casos.</p>
+      <p><strong>Decidido, sin implementar:</strong> el número conservará el decimal tal como lo escribe el usuario, sin pasar por <code>float</code>; se permite quitar los ceros a la derecha.</p>
     </div>
   </div>
 
@@ -156,6 +157,7 @@
     <div class="callout warn">
       <div class="callout-title">Los nombres de meses y días dependen del locale</div>
       <p>Directivas como <code>%B</code> o <code>%A</code> siguen el locale del proceso, y el código no lo configura. En este equipo, <code>{{f:date(%d de %B de %Y)}}</code> con <code>2024-01-05</code> produce <code>05 de January de 2024</code>.</p>
+      <p><strong>Decidido, sin implementar:</strong> el idioma de meses y días será elegible, con español por defecto.</p>
     </div>
     <p>La salida de strftime no se escapa. El formato lo escribe el autor de la plantilla, no el usuario que llena el formulario.</p>
   </div>

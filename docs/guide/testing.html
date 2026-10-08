@@ -21,14 +21,14 @@
 <pre><code>cd backend
 .\.venv\Scripts\Activate.ps1
 pip install -e ".[dev]"
-pytest test</code></pre>
-<p>Indica la carpeta <code>test</code> de forma explícita: <code>pyproject.toml</code> declara <code>testpaths = ["tests"]</code>, carpeta que no existe. Con <code>pytest</code> a secas igual se encuentran todas, pero pytest avisa <em>No files were found in testpaths</em> y busca desde el directorio actual.</p>
+pytest</code></pre>
+<p><code>pyproject.toml</code> declara <code>testpaths = ["test"]</code>, así que <code>pytest</code> sin argumentos corre toda la carpeta <code>test/</code>.</p>
 <p>Para una sola capa o archivo: <code>pytest test/unit</code>, <code>pytest test/unit/test_parser.py</code>, o <code>pytest -k enum</code> para filtrar por nombre.</p>
 
 <h2>Último resultado</h2>
 <div class="callout ok">
-  <div class="callout-title">143 pasan, 0 fallan, 0 se saltan</div>
-  <p>Corrida del 2026-10-07 sobre <code>main</code> (<code>0bd2e3e</code>) en unos 32 segundos, con Python 3.11.3, pytest 9.1.1 y Tectonic 0.16.9 en el PATH. Las pruebas que compilan de verdad se ejecutaron porque Tectonic está instalado; sin él se saltan 8.</p>
+  <div class="callout-title">133 pasan, 0 fallan, 0 se saltan</div>
+  <p>Corrida del 2026-10-07 sobre la rama <code>change/core-test-config</code> (el core de <code>main</code> sin el archivo de pruebas duplicado) en unos 35 segundos, con Python 3.11.3, pytest 9.1.1 y Tectonic 0.16.9 en el PATH. Las pruebas que compilan de verdad se ejecutaron porque Tectonic está instalado; sin él se saltan 8.</p>
 </div>
 
 <h2>Inventario</h2>
@@ -41,10 +41,9 @@ pytest test</code></pre>
   <tr><td><code>test/unit/test_service.py</code></td><td>20</td><td>Orquestación con compiladores falsos: camino feliz, validaciones, conversión a <code>CompileError</code>, propagación de <code>CompilerNotFoundError</code>, que no se mutan las entradas y que el compilador por defecto es Tectonic.</td></tr>
   <tr><td><code>test/unit/test_compiler.py</code></td><td>5</td><td><code>TectonicCompiler</code> con <code>subprocess.run</code> falso: éxito, error de LaTeX, timeout y ejecutable ausente.</td></tr>
   <tr><td><code>test/integration/test_parser_renderer.py</code></td><td>10</td><td>Parser y renderer reales juntos, sin compilar.</td></tr>
-  <tr><td><code>test/integration/test_integration.py</code></td><td>10</td><td>Copia idéntica del anterior (ver abajo).</td></tr>
   <tr><td><code>test/integration/test_service_pipeline.py</code></td><td>6</td><td>Pipeline completo con Tectonic real: todos los tipos, caracteres especiales, opcionales, un paquete descargado bajo demanda, y un documento roto que da <code>CompileError</code>. Se salta sin Tectonic.</td></tr>
   <tr><td><code>test/integration/test_compiler_tectonic.py</code></td><td>2</td><td>El compilador real: un documento mínimo produce PDF y uno roto da <code>ok=False</code>. Se salta sin Tectonic.</td></tr>
-  <tr><th>Total</th><th>143</th><th></th></tr>
+  <tr><th>Total</th><th>133</th><th></th></tr>
 </table></div>
 
 <h2>Estrategias</h2>
@@ -65,21 +64,13 @@ pytest test</code></pre>
 <p>Convención del proyecto: un módulo de prueba por módulo del core, con las pruebas agrupadas en clases por comportamiento (<code>TestBasicParsing</code>, <code>TestOptionalFields</code>…).</p>
 
 <h2>Observaciones</h2>
-<div class="callout warn">
-  <div class="callout-title">Archivo duplicado</div>
-  <p><code>test_integration.py</code> y <code>test_parser_renderer.py</code> tienen exactamente el mismo contenido. El commit <code>77180dc</code> ("filename changed…") añadió el nombre nuevo sin borrar el viejo, así que esas 10 pruebas corren dos veces.</p>
-</div>
-<div class="callout warn">
-  <div class="callout-title"><code>testpaths</code> apunta a una carpeta que no existe</div>
-  <p>La carpeta es <code>test/</code> y la configuración dice <code>tests</code>. Ver <a href="project.html#discrepancias">Discrepancias</a>.</p>
-</div>
 <div class="callout">
   <div class="callout-title">Sin cobertura</div>
-  <p>Ninguna prueba toca los límites del paso por <code>float</code> en <code>number</code> ni la dependencia del locale en <code>date</code> (ver <a href="markers.html#tipos-y-escape">Marcadores y tipos</a>). No hay medición de cobertura configurada.</p>
+  <p>Ninguna prueba toca los límites del paso por <code>float</code> en <code>number</code> ni la dependencia del locale en <code>date</code> (ver <a href="markers.html#tipos-y-escape">Marcadores y tipos</a>); los dos comportamientos van a cambiar por decisión ya tomada. No hay medición de cobertura configurada.</p>
 </div>
 
 <h2 data-toc-label="Pruebas de la capa web">Pruebas de la capa web <span class="badge dev">rama</span></h2>
-<p>La rama <code>feature/backend/web</code> añade <code>test/unit/test_web_parse.py</code> con 7 pruebas de <code>POST /parse</code> usando <code>TestClient</code> de FastAPI. Corrida en una copia temporal de la rama (sin tocar el repositorio): <strong>150 pasan</strong> (143 + 7), con un aviso de deprecación: Starlette pide <code>httpx2</code> en lugar de <code>httpx</code> para su <code>TestClient</code>.</p>
+<p>La rama <code>feature/backend/web</code> añade <code>test/unit/test_web_parse.py</code> con 7 pruebas de <code>POST /parse</code> usando <code>TestClient</code> de FastAPI. En esa rama pasan <strong>150</strong>: las 143 del core (todavía con el archivo duplicado, que se borró después en <code>main</code>) más esas 7. El <code>TestClient</code> de Starlette avisa que prefiere <code>httpx2</code> a <code>httpx</code>; la rama filtra solo ese aviso con <code>filterwarnings</code> en <code>pyproject.toml</code>.</p>
 
 </main>
 <nav class="toc" id="toc" aria-label="En esta página"></nav>

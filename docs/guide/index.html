@@ -18,7 +18,7 @@
 
 <div class="callout">
   <div class="callout-title">Qué describe esta guía</div>
-  <p>Lo implementado en la rama <code>main</code>, commit <code>0bd2e3e</code> (igual a <code>origin/main</code>), verificado contra el código y las pruebas el 2026-10-07. Lo que existe solo en ramas locales o en el stash aparece aparte, en <a href="web.html">Capa web</a>, marcado como <span class="badge dev">en desarrollo</span>.</p>
+  <p>Lo implementado en la rama <code>main</code>, commit <code>0bd2e3e</code> (igual a <code>origin/main</code>), verificado contra el código y las pruebas el 2026-10-07. Lo que existe solo en otras ramas aparece aparte, en <a href="web.html">Capa web</a>, marcado como <span class="badge dev">en desarrollo</span>.</p>
 </div>
 
 <h2>Qué hace hoy</h2>
@@ -48,9 +48,9 @@ open(<span class="s">"contrato.pdf"</span>, <span class="s">"wb"</span>).write(p
 <h2>Estado por componente</h2>
 <div class="card">
   <div class="status-row"><span class="status-name">Core</span><span><span class="badge ok">hecho</span></span><span>Parser, escaping, renderer, compiler y service en <code>main</code>. Solo usa la biblioteca estándar de Python más el ejecutable de Tectonic.</span></div>
-  <div class="status-row"><span class="status-name">Pruebas del core</span><span><span class="badge ok">143 pasan</span></span><span>Unitarias y de integración, incluidas las que compilan con Tectonic real (aquí no se saltan porque Tectonic está instalado). Ver <a href="testing.html">Pruebas</a>.</span></div>
-  <div class="status-row"><span class="status-name">Capa web: <code>POST /parse</code></span><span><span class="badge dev">rama local</span></span><span>FastAPI en <code>feature/backend/web</code>, sin fusionar ni subir al remoto. Con sus 7 pruebas propias, la rama pasa 150.</span></div>
-  <div class="status-row"><span class="status-name">Capa web: <code>POST /generate</code></span><span><span class="badge warn">empezado</span></span><span>Solo existe el esquema <code>GenerateRequest</code>, guardado en un stash. No hay ruta ni pruebas.</span></div>
+  <div class="status-row"><span class="status-name">Pruebas del core</span><span><span class="badge ok">133 pasan</span></span><span>Unitarias y de integración, incluidas las que compilan con Tectonic real (aquí no se saltan porque Tectonic está instalado). Ver <a href="testing.html">Pruebas</a>.</span></div>
+  <div class="status-row"><span class="status-name">Capa web: <code>POST /parse</code></span><span><span class="badge dev">rama</span></span><span>FastAPI en <code>feature/backend/web</code>, subida al remoto pero sin fusionar en <code>main</code>. Con sus 7 pruebas propias, la rama pasa 150.</span></div>
+  <div class="status-row"><span class="status-name">Capa web: <code>POST /generate</code></span><span><span class="badge warn">empezado</span></span><span>Solo existe el esquema <code>GenerateRequest</code>, en la rama <code>feature/backend/web-generate-endpoint</code>. No hay ruta ni pruebas.</span></div>
   <div class="status-row"><span class="status-name">Frontend</span><span><span class="badge muted">sin empezar</span></span><span>No hay código. El plan del desarrollador es React con TypeScript y Vite.</span></div>
   <div class="status-row"><span class="status-name">Despliegue</span><span><span class="badge muted">sin empezar</span></span><span>No hay Dockerfile ni configuración de despliegue.</span></div>
 </div>

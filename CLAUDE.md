@@ -4,9 +4,10 @@ Genera PDFs a partir de plantillas LaTeX (`.tex`) con campos dinámicos tipados,
 
 ## Estado actual
 
-* `main`: el core está completo y probado (`backend/src/latexgen/core/`: parser, escaping, renderer, compiler, service). 143 pruebas pasan.
-* Rama local `feature/backend/web` (sin fusionar ni subir): capa FastAPI con `POST /parse`. `POST /generate` solo tiene su esquema `GenerateRequest`, guardado en `stash@{0}` sobre `feature/backend/web-generate-endpoint`.
+* `main`: el core está completo y probado (`backend/src/latexgen/core/`: parser, escaping, renderer, compiler, service). 133 pruebas pasan.
+* Rama `feature/backend/web` (subida, sin fusionar): capa FastAPI con `POST /parse`. `POST /generate` solo tiene su esquema `GenerateRequest`, en la rama `feature/backend/web-generate-endpoint`.
 * Frontend (React + TypeScript con Vite): sin empezar.
+* Decidido, sin implementar: `number` conservará el decimal tal como lo escribe el usuario (se pueden quitar los ceros a la derecha), sin pasar por `float`; los meses y días de `date` saldrán en un idioma elegible, español por defecto.
 * Pendientes y discrepancias conocidas: `docs/guide/project.html`.
 
 ## Documentos
@@ -55,7 +56,7 @@ Todo desde `backend/`, con el entorno virtual (`backend/.venv`, Python 3.11.3):
 ```
 .\.venv\Scripts\Activate.ps1
 pip install -e ".[dev]"      # reinstala si cambian las dependencias
-pytest test                  # la carpeta es test/; testpaths dice "tests"
+pytest                       # testpaths apunta a test/
 ```
 
 * Tectonic 0.16.9 está en `C:\Tools\tectonic.exe` (en el PATH). Las pruebas que compilan de verdad se saltan solas si no lo encuentran.
@@ -64,8 +65,8 @@ pytest test                  # la carpeta es test/; testpaths dice "tests"
 
 ## Git
 
-* Remoto `origin`: `https://github.com/grameromar/Contract-Document-Generation-Engine.git`. Solo `main` está subida.
+* Remoto `origin`: `https://github.com/grameromar/Contract-Document-Generation-Engine.git`.
 * Cada pieza en su propia rama desde `main`: `feature/<area>-<tema>` para lo nuevo y `change/<area>-<tema>` para modificar lo existente (por ejemplo `feature/core-parser`, `change/core-markers`).
 * Commits pequeños en inglés, uno por paso verificable.
 * Merge a `main` solo con mi visto bueno. No hagas push sin que te lo pida.
-* No toques el stash ni las ramas web sin preguntarme: son trabajo en curso que solo existe en esta máquina.
+* No reescribas ni borres las ramas web sin preguntarme: son trabajo en curso.

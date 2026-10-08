@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proyecto y git · latexgen</title>
+<link rel="stylesheet" href="guide.css">
+<script>try{var t=localStorage.getItem("latexgen-guide-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="content" id="content">
+
+<p class="eyebrow">Proyecto</p>
+<h1>Proyecto y git</h1>
+<p class="lead">Estructura de carpetas, entorno de desarrollo, estado del repositorio, discrepancias y pendientes. Revisado el 2026-10-07.</p>
+
+<h2>Estructura</h2>
+<pre data-nocopy><code>latex-pdf-gen/
+├── .gitignore
+├── .vscode/settings.json        <span class="c"># ignorado por git</span>
+├── README.md
+├── CLAUDE.md                    <span class="c"># instrucciones para el asistente</span>
+├── docs/guide/                  <span class="c"># esta guía</span>
+└── backend/
+    ├── .gitignore               <span class="c"># idéntico al de la raíz</span>
+    ├── .venv/                   <span class="c"># entorno virtual, ignorado</span>
+    ├── pyproject.toml
+    ├── src/latexgen/
+    │   ├── __init__.py          <span class="c"># vacío</span>
+    │   └── core/                <span class="c"># markers, models, exceptions, parser,</span>
+    │                            <span class="c"># escaping, renderer, compiler, service</span>
+    └── test/
+        ├── unit/                <span class="c"># 5 archivos</span>
+        └── integration/         <span class="c"># 3 archivos</span></code></pre>
+
+<h2>Entorno de desarrollo</h2>
+<div class="table-wrap"><table>
+  <tr><th>Pieza</th><th>Estado verificado</th></tr>
+  <tr><td>Python</td><td><code>backend/.venv</code> con Python 3.11.3 (<code>C:\Python311</code>). <code>pyproject.toml</code> pide <code>&gt;=3.10</code>.</td></tr>
+  <tr><td>Paquete</td><td><code>latexgen 0.1.0</code> instalado en modo editable (<code>pip install -e</code>), apuntando a <code>backend/src</code>.</td></tr>
+  <tr><td>Dependencias en <code>main</code></td><td>Ninguna en ejecución; <code>pytest&gt;=8.0</code> en el extra <code>dev</code>.</td></tr>
+  <tr><td>Instalado en el venv</td><td>pytest 9.1.1, y además fastapi 0.138.0, pydantic 2.13.4, PyYAML 6.0.3, uvicorn 0.49.0 y httpx 0.28.1: las dependencias de la rama web, que quedaron instaladas.</td></tr>
+  <tr><td>Tectonic</td><td>0.16.9 en <code>C:\Tools\tectonic.exe</code>, accesible desde el PATH. Se instala aparte, no con pip.</td></tr>
+  <tr><td>Editor</td><td><code>.vscode/settings.json</code> agrega <code>./backend/src</code> a <code>python.analysis.extraPaths</code> para que el análisis de VS Code encuentre el paquete.</td></tr>
+</table></div>
+
+<h3>Preparar el entorno desde cero</h3>
+<pre><code>cd backend
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -e ".[dev]"
+tectonic --version     <span class="c"># debe responder; si no, instalar Tectonic y agregarlo al PATH</span>
+pytest</code></pre>
+<p>Hay que reinstalar con <code>pip install -e ".[dev]"</code> cada vez que cambian las dependencias de <code>pyproject.toml</code>.</p>
+
+<h2>Repositorio git</h2>
+<div class="table-wrap"><table>
+  <tr><th>Dato</th><th>Valor</th></tr>
+  <tr><td>Remoto <code>origin</code></td><td><code>https://github.com/grameromar/Contract-Document-Generation-Engine.git</code> (mismo URL para fetch y push)</td></tr>
+  <tr><td>Conectividad</td><td><span class="badge ok">lectura y escritura</span> <code>git ls-remote</code> responde, y el 2026-10-07 se subieron ramas con <code>git push</code>.</td></tr>
+  <tr><td>Ramas en el remoto</td><td><code>main</code>, las dos ramas web, <code>docs/technical-guide</code> y <code>change/core-test-config</code>. Sin etiquetas.</td></tr>
+  <tr><td>Rama principal</td><td><code>main</code>, siguiendo a <code>origin/main</code>. Desde el 2026-10-07 incluye la guía y los arreglos de pruebas.</td></tr>
+  <tr><td>Stash</td><td>Vacío. La única entrada que tenía se guardó como el commit <code>8df8759</code> de <code>feature/backend/web-generate-endpoint</code> y después se borró.</td></tr>
+</table></div>
+<p>El nombre del repositorio remoto (<em>Contract-Document-Generation-Engine</em>) no coincide con el de la carpeta (<code>latex-pdf-gen</code>) ni con el del paquete (<code>latexgen</code>).</p>
+
+<h3>Ramas locales</h3>
+<div class="table-wrap"><table>
+  <tr><th>Rama</th><th>Último commit</th><th>Fusionada en main</th><th>En el remoto</th></tr>
+  <tr><td><code>main</code></td><td>2026-10-07</td><td></td><td>sí</td></tr>
+  <tr><td><code>feature/core-escaping</code></td><td><code>63bb9e2</code> 2026-06-20</td><td>sí</td><td>no</td></tr>
+  <tr><td><code>feature/core-renderer</code></td><td><code>3b72af4</code> 2026-06-21</td><td>sí</td><td>no</td></tr>
+  <tr><td><code>feature/core-parser</code></td><td><code>adbb7b4</code> 2026-06-21</td><td>sí</td><td>no</td></tr>
+  <tr><td><code>change/core-markers</code></td><td><code>2c5a9b4</code> 2026-06-21</td><td>sí</td><td>no</td></tr>
+  <tr><td><code>change/core-test</code></td><td><code>77180dc</code> 2026-06-21</td><td>sí</td><td>no</td></tr>
+  <tr><td><code>feature/core-compiler</code></td><td><code>29afbb9</code> 2026-06-21</td><td>sí</td><td>no</td></tr>
+  <tr><td><code>feature/core-service</code></td><td><code>a509a5d</code> 2026-06-21</td><td>sí</td><td>no</td></tr>
+  <tr><td><code>feature/backend/web</code></td><td><code>c593a65</code> 2026-10-07</td><td><span class="badge dev">no</span></td><td>sí</td></tr>
+  <tr><td><code>feature/backend/web-generate-endpoint</code></td><td><code>8df8759</code> 2026-10-07</td><td><span class="badge dev">no</span></td><td>sí</td></tr>
+  <tr><td><code>docs/technical-guide</code></td><td>2026-10-07</td><td>sí</td><td>sí</td></tr>
+  <tr><td><code>change/core-test-config</code></td><td>2026-10-07</td><td>sí</td><td>sí</td></tr>
+</table></div>
+<p>Las ramas <code>feature/core-…</code> y <code>change/core-…</code> antiguas ya están fusionadas en <code>main</code>, así que no hace falta subirlas. <code>change/core-test-config</code> partió de <code>docs/technical-guide</code> porque actualizaba la guía en el mismo commit, y se fusionaron juntas. Flujo observado en el historial: una rama <code>feature/…</code> o <code>change/…</code> por pieza, fusionada a la rama principal al terminarla. Un merge de la rama web (<code>3ad32ce</code>, "Merge branch 'master' into feature/backend/web") muestra que la rama principal se llamó antes <code>master</code>.</p>
+
+<h2 id="discrepancias">Discrepancias</h2>
+<p>Encontradas al comparar configuración, documentos y código. Ninguna impide trabajar.</p>
+<div class="callout ok">
+  <p>Resueltas en <code>change/core-test-config</code>: <code>testpaths</code> apuntaba a <code>tests</code> en vez de <code>test</code>, y <code>test_integration.py</code> era una copia de <code>test_parser_renderer.py</code> (10 pruebas corrían dos veces).</p>
+</div>
+<div class="table-wrap"><table>
+  <tr><th>#</th><th>Qué</th><th>Efecto</th></tr>
+  <tr><td>1</td><td><code>.gitignore</code> idéntico en la raíz y en <code>backend/</code>.</td><td>Reglas duplicadas que hay que mantener en dos sitios.</td></tr>
+  <tr><td>2</td><td>Los metadatos de instalación (<code>latexgen.egg-info</code>, ignorados por git) listan la capa web y sus dependencias, que no están en <code>main</code>.</td><td>Ninguno en ejecución; se regeneran al reinstalar.</td></tr>
+  <tr><td>3</td><td><code>tectonic_path</code> y <code>timeout</code> solo se pueden cambiar en el constructor de <code>TectonicCompiler</code>; <code>TemplateService()</code> usa los valores por defecto.</td><td>Para usar otra ruta hay que construir el compilador e inyectarlo.</td></tr>
+  <tr><td>4</td><td>El antiguo <code>CONTEXT.md</code> (sin seguimiento) describía como hecho el endpoint <code>/generate</code>, <code>test_web_generate</code> y unas 138 pruebas.</td><td>Sustituido por <code>CLAUDE.md</code> y esta guía.</td></tr>
+</table></div>
+
+<h2>Pendientes</h2>
+<p>Nada de esto está implementado.</p>
+<h3>Decisiones tomadas</h3>
+<ul>
+  <li><strong>Números exactos</strong>: <code>number</code> conservará el decimal tal como lo escribe el usuario, sin pasar por <code>float</code> (sin perder dígitos ni caer en notación científica). Se permite quitar los ceros a la derecha.</li>
+  <li><strong>Idioma de las fechas</strong>: los nombres de meses y días de <code>date</code> saldrán en un idioma elegible, español por defecto, en vez de depender del locale del proceso. Falta diseñar dónde se elige el idioma.</li>
+</ul>
+<h3>Por hacer</h3>
+<ul>
+  <li><strong><code>POST /generate</code></strong>: ruta, respuesta PDF y pruebas (solo existe <code>GenerateRequest</code>, en <code>feature/backend/web-generate-endpoint</code>).</li>
+  <li><strong>Frontend</strong>: React con TypeScript (Vite). Cargar el <code>.tex</code>, llamar a <code>/parse</code>, formulario con un control por tipo (texto, número, selector de fecha, casilla, lista), enviar a <code>/generate</code>, descargar el PDF y mostrar los errores.</li>
+  <li><strong>Pulido del backend</strong>: Dockerfile (Tectonic más <code>fontconfig</code> en Debian slim) y leer <code>tectonic_path</code> desde la configuración o una variable de entorno.</li>
+  <li><strong>Opcionales</strong>: subir la plantilla como archivo multipart, y endurecer el aislamiento de la compilación para producción.</li>
+</ul>
+
+</main>
+<nav class="toc" id="toc" aria-label="En esta página"></nav>
+</div>
+<script src="guide.js"></script>
+</body>
+</html>

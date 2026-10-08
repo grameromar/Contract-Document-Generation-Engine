@@ -20,7 +20,7 @@ dev = ["pytest>=8.0", "httpx>=0.27"]
 where = ["src"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["test"]
 filterwarnings = [
     # Starlette's TestClient prefers httpx2 and warns when it falls back to
     # httpx. The tests behave the same with either client, so this one
